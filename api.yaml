@@ -23,6 +23,45 @@ paths:
       description: Returns a list of all car sale ads
       security:
         - TokenHeader: []
+      parameters:
+        - name: rows_limit
+          in: query
+          description: Limit the number of rows returned
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 25
+            maximum: 100
+        - name: total_rows
+          in: query
+          description: Total number of rows available
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: order_by
+          in: query
+          description: Specify the field to order the results by
+          required: false
+          schema:
+            type: string
+            enum:
+              - update_date
+              - creation_date
+              - publish_date
+              - sale_type
+              - contact_id
+              - total_price
+        - name: order_direction
+          in: query
+          description: Specify the direction of sorting (e.g., ASC for ascending, DESC for descending)
+          required: false
+          schema:
+            type: string
+            enum:
+              - ASC
+              - DESC
       responses:
         '200':
           description: A list of ads
