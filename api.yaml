@@ -216,7 +216,7 @@ components:
             horsepower:
               type: integer
             exterior_color:
-              $ref: '#/components/schemas/Color'
+              $ref: '#/components/schemas/ColorItem'
             interior_color:
               type: string
             wheel_drive:
@@ -250,9 +250,9 @@ components:
             eu_next_date:
               type: string
             make:
-              $ref: '#/components/schemas/Make'
+              $ref: '#/components/schemas/MakeItem'
             model:
-              $ref: '#/components/schemas/Model'
+              $ref: '#/components/schemas/ModelItem'
             make_model:
               type: string
             creation_date_unix:
