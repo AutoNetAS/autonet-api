@@ -96,6 +96,18 @@ components:
           $ref: '#/components/schemas/Preferences'
         address:
           $ref: '#/components/schemas/Address'
+        creation_date_unix:
+          type: integer
+          format: int64
+        update_date_unix:
+          type: integer
+          format: int64
+        publish_date_unix:
+          type: integer
+          format: int64
+        sold_date_unix:
+          type: integer
+          format: int64
         media:
           type: array
           items:
