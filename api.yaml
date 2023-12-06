@@ -191,9 +191,102 @@ components:
         VehicleItem:
           type: object
           properties:
-            id:
-                type: integer
-                format: int32
+            vehicles_id:
+              type: integer
+            identifier:
+              type: string
+            license_number:
+              type: string
+            vin:
+              type: string
+            year:
+              type: integer
+            mileage_int:
+              type: integer
+            fuel:
+              type: string
+            weight:
+              type: integer
+            gearbox:
+              type: string
+            doors:
+              type: integer
+            seats:
+              type: integer
+            max_towing:
+              type: integer
+            total_owners:
+              type: integer
+            loadingarea:
+              type: integer
+            batterykwh:
+              type: integer
+            batteryrange:
+              type: integer
+            co2:
+              type: integer
+            tax_class:
+              type: string
+            body_text:
+              type: string
+            cc:
+              type: integer
+            horsepower:
+              type: integer
+            exterior_color:
+              $ref: '#/components/schemas/Color'
+            interior_color:
+              type: string
+            wheel_drive:
+              type: string
+            vehicletype:
+              type: string
+            condition_report_url:
+              type: string
+            vehiclewarranty:
+              type: string
+            vehiclewarranty_id:
+              type: integer
+            vehiclewarranty_months:
+              type: integer
+            vehiclewarranty_mileage:
+              type: integer
+            maintenanceprogram:
+              type: integer
+            right_to_exchange:
+              type: integer
+            finn_import_ad_id:
+              type: integer
+            first_registration_unix:
+              type: integer
+            eu_last_date:
+              type: string
+            eu_next_date:
+              type: string
+            make:
+              $ref: '#/components/schemas/Make'
+            model:
+              $ref: '#/components/schemas/Model'
+            make_model:
+              type: string
+            creation_date_unix:
+              type: integer
+            update_date_unix:
+              type: integer
+            data_update_date_unix:
+              type: integer
+            stand_time:
+              type: integer
+            incoming_date_unix:
+              type: integer
+            equipment:
+              type: array
+              items:
+                type: string
+            vehicle_status:
+              type: string
+            svv_status:
+              type: string
   securitySchemes:
     TokenHeader:
       type: apiKey
