@@ -112,7 +112,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MediaItem'
-      # Add other fields as necessary
+        vehicle:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehicleItem'
 
     Preferences:
       type: object
@@ -184,6 +187,13 @@ components:
         logo_background:
             type: boolean
             description: If AutoNet's logobackground service has been applied
+
+        VehicleItem:
+          type: object
+          properties:
+            id:
+                type: integer
+                format: int32
   securitySchemes:
     TokenHeader:
       type: apiKey
