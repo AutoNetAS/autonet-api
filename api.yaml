@@ -122,44 +122,58 @@ components:
           properties:
             vehicles_id:
               type: integer
+              format: int32
             identifier:
               type: string
+              description: Returns license_number or VIN, whatever is available
             license_number:
               type: string
             vin:
               type: string
             year:
               type: integer
+              format: int32
             mileage_int:
               type: integer
+              format: int32
             fuel:
               type: string
             weight:
               type: integer
+              format: int32
             gearbox:
               type: string
             doors:
               type: integer
+              format: int32
             seats:
               type: integer
+              format: int32
             max_towing:
               type: integer
+              format: int32
             total_owners:
               type: integer
+              format: int32
             loadingarea:
               type: integer
+              format: int32
             batterykwh:
               type: integer
+              format: int32
             batteryrange:
               type: integer
+              format: int32
             co2:
               type: integer
+              format: int32
             tax_class:
               type: string
             body_text:
               type: string
             cc:
               type: integer
+              format: int32
             horsepower:
               type: integer
             exterior_color:
@@ -176,18 +190,22 @@ components:
               type: string
             vehiclewarranty_id:
               type: integer
+              format: int32
             vehiclewarranty_months:
               type: integer
+              format: int32
             vehiclewarranty_mileage:
               type: integer
+              format: int32
             maintenanceprogram:
               type: integer
+              format: int32
             right_to_exchange:
               type: integer
-            finn_import_ad_id:
-              type: integer
+              format: int32
             first_registration_unix:
               type: integer
+              format: int32
             eu_last_date:
               type: string
             eu_next_date:
@@ -200,14 +218,19 @@ components:
               type: string
             creation_date_unix:
               type: integer
+              format: int32
             update_date_unix:
               type: integer
+              format: int32
             data_update_date_unix:
               type: integer
+              format: int32
             stand_time:
               type: integer
+              format: int32
             incoming_date_unix:
               type: integer
+              format: int32
             equipment:
               type: array
               items:
