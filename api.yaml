@@ -15,6 +15,540 @@ info:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
 paths:
+  /company/get:
+    get:
+      tags:
+        - Company
+      summary: Get company data
+      description: Returns a company data
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Company data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Company'
+                  
+  /insurance/get:
+    get:
+      tags:
+        - Insurance
+      description: Returns list of insurances
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: A list of insurances
+                
+  /insurance/get/{ID}:
+    get:
+      tags:
+        - Insurance
+      description: Returns an insurance
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Gets insurance
+          
+  /contracts/insurance/calculate:
+    post:
+      tags:
+        - Insurance
+      description: Calculates rates of insurance from insurance company
+      security:
+        - TokenHeader: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                vehicle:
+                  type: object
+                  properties:
+                    license_number:
+                      type: string
+                    year:
+                      type: integer
+                      format: int32
+                  required:
+                    - license_number
+                    - year
+                    
+                owner:
+                  type: object
+                  properties:
+                    pid:
+                      type: integer
+                      format: int32
+                    first_name:
+                      type: string
+                    last_name:
+                      type: string
+                  required:
+                    - pid
+                    - first_name
+                    - last_name
+                    
+                insurance_company_id:
+                    type: integer
+                    format: int32
+                    description: Insurance company ID
+                coverage:
+                  type: string
+                  enum:
+                  - SUPER
+                  - FULL
+                  - PARTIAL
+                  - STANDARD
+                  description: The type of insurance
+                mileage:
+                  type: number
+                  format: int32
+                  description: Max mileage of insurance
+                bonus:
+                  type: number
+                  format: int32
+                  description: Estimated contact bonus
+              required:
+                - vehicle
+                - owner
+                - insurance_company_id
+                - coverage
+                - mileage
+                - bonus
+      responses:
+        '200':
+          description: Pricelist
+          content:
+            application/json:
+              schema:
+                  type: object
+                  properties:
+                    price_per_month:
+                      type: integer
+                      format: int32
+
+  /contracts/insurance/order:
+    post:
+      tags:
+        - Insurance
+      description: Orders insurance from insurance company
+      security:
+        - TokenHeader: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                vehicle:
+                  type: object
+                  properties:
+                    license_number:
+                      type: string
+                    year:
+                      type: integer
+                      format: int32
+                  required:
+                    - license_number
+                    - year
+                    
+                owner:
+                  type: object
+                  properties:
+                    pid:
+                      type: integer
+                      format: int32
+                    first_name:
+                      type: string
+                    last_name:
+                      type: string
+                  required:
+                    - pid
+                    - first_name
+                    - last_name
+                    
+                insurance_company_id:
+                    type: integer
+                    format: int32
+                    description: Insurance company ID
+                coverage:
+                  type: string
+                  enum:
+                  - SUPER
+                  - FULL
+                  - PARTIAL
+                  - STANDARD
+                  description: The type of insurance
+                start_date:
+                  type: number
+                  format: int64
+                  description: Start date in unix timestamp
+                mileage:
+                  type: number
+                  format: int32
+                  description: Max mileage of insurance
+                bonus:
+                  type: number
+                  format: int32
+                  description: Estimated contact bonus
+              required:
+                - vehicle
+                - owner
+                - insurance_company_id
+                - coverage
+                - start_date
+                - mileage
+                - bonus
+      responses:
+        '200':
+          description: Insurance created
+          content:
+            application/json:
+              schema:
+                  type: object
+                  properties:
+                    insurance_id:
+                      type: integer
+                      format: int32
+
+  /warranty/get:
+    get:
+      tags:
+        - Warranty
+      description: Returns list of warranties
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: A list of warranties
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Warranties'
+
+                
+  /warranty/get/{ID}:
+    get:
+      tags:
+        - Warranty
+      description: Returns a warranty
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Gets warranty
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Warranties'
+          
+  /contracts/warranty/calculate:
+    post:
+      tags:
+        - Warranty
+      description: Calculates rates of warranty from warranty company
+      security:
+        - TokenHeader: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                vehicle:
+                  type: object
+                  properties:
+                    license_number:
+                      type: string
+                    year:
+                      type: integer
+                      format: int32
+                    mileage:
+                      type: integer
+                      format: int32
+                  required:
+                    - license_number
+                    - year
+                    - mileage
+                    
+                warranty_company_id:
+                    type: integer
+                    format: int32
+                    description: Warranty company ID
+              required:
+                - vehicle
+                - warranty_company_id
+      responses:
+        '200':
+          description: Warranties
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Warranties'
+
+  /contracts/warranty/order:
+    post:
+      tags:
+        - Warranty
+      description: Orders insurance from insurance company
+      security:
+        - TokenHeader: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                vehicle:
+                  type: object
+                  properties:
+                    license_number:
+                      type: string
+                    year:
+                      type: integer
+                      format: int32
+                    mileage:
+                      type: integer
+                      format: int32
+                  required:
+                    - license_number
+                    - year
+                    - mileage
+                    
+                owner:
+                  type: object
+                  properties:
+                    pid:
+                      type: integer
+                      format: int32
+                    first_name:
+                      type: string
+                    last_name:
+                      type: string
+                  required:
+                    - pid
+                    - first_name
+                    - last_name
+                    
+                warranty_company_id:
+                    type: integer
+                    format: int32
+                    description: Warranty company ID
+                start_date:
+                  type: number
+                  format: int64
+                  description: Start date in unix timestamp
+              required:
+                - vehicle
+                - owner
+                - warranty_company_id
+                - start_date
+      responses:
+        '200':
+          description: Created warranty
+          content:
+            application/json:
+              schema:
+                  type: object
+                  properties:
+                    warranty_id:
+                      type: integer
+                      format: int32
+
+  /finance/get:
+    get:
+      tags:
+        - Finance
+      description: Returns list of finance options
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: A list of finance options
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Warranties'
+
+                
+  /finance/get/{ID}:
+    get:
+      tags:
+        - Finance
+      description: Returns a finance
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Gets finance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Warranties'
+          
+  /contracts/finance/calculate:
+    post:
+      tags:
+        - Finance
+      description: Calculates rates of finance from finance company
+      security:
+        - TokenHeader: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                vehicle:
+                  type: object
+                  properties:
+                    license_number:
+                      type: string
+                    year:
+                      type: integer
+                      format: int32
+                    mileage:
+                      type: integer
+                      format: int32
+                  required:
+                    - license_number
+                    - year
+                    - mileage
+                    
+                owners:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                      - OWNER
+                      - CO_OWNER
+                    entity_type:
+                      type: string
+                      enum:
+                      - PERSON
+                      - COMPANY
+                    pid:
+                      type: integer
+                      format: int32
+                    first_name:
+                      type: string
+                    last_name:
+                      type: string
+                    email:
+                      type: string
+                    phone_number:
+                      type: integer
+                      format: int32
+                  required:
+                    - type
+                    - entity_type
+                    - pid
+                    - first_name
+                    - last_name
+                    - email
+                    - phone_number
+                    
+                finance_company_id:
+                    type: integer
+                    format: int32
+                    description: Finance company ID
+              required:
+                - vehicle
+                - owners
+                - finance_company_id
+      responses:
+        '200':
+          description: Finances
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Warranties'
+
+  /contracts/finance/order:
+    post:
+      tags:
+        - Finance
+      description: Orders finance from finance company
+      security:
+        - TokenHeader: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                vehicle:
+                  type: object
+                  properties:
+                    license_number:
+                      type: string
+                    year:
+                      type: integer
+                      format: int32
+                    mileage:
+                      type: integer
+                      format: int32
+                  required:
+                    - license_number
+                    - year
+                    - mileage
+                    
+                owner:
+                  type: object
+                  properties:
+                    pid:
+                      type: integer
+                      format: int32
+                    first_name:
+                      type: string
+                    last_name:
+                      type: string
+                  required:
+                    - pid
+                    - first_name
+                    - last_name
+                    
+                finance_company_id:
+                    type: integer
+                    format: int32
+                    description: Finance company ID
+                start_date:
+                  type: number
+                  format: int64
+                  description: Start date in unix timestamp
+              required:
+                - vehicle
+                - owner
+                - finance_company_id
+                - start_date
+      responses:
+        '200':
+          description: Created finance
+          content:
+            application/json:
+              schema:
+                  type: object
+                  properties:
+                    warranty_id:
+                      type: integer
+                      format: int32
+
   /ad/get:
     get:
       tags:
@@ -97,6 +631,181 @@ paths:
           description: Ad not found
 components:
   schemas:
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        organization_number:
+          type: integer
+          format: int32
+        name:
+          type: string
+        is_department:
+          type: boolean
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            postal_code:
+              type: string
+            city:
+              type: string
+            country:
+              type: string
+        contact:
+          type: object
+          properties:
+            telephone:
+              type: string
+            email:
+              type: string
+            website:
+              type: string
+        root_member:
+          type: object
+          properties:
+            main_company:
+              type: boolean
+            id:
+              type: integer
+              format: int32
+            name:
+              type: string
+            email:
+              type: string
+            phone:
+              type: string
+        payment_plan_id:
+          type: integer
+          format: int32
+        payment_vehicles_per_month:
+          type: integer
+          format: int32
+        billing_interval:
+          type: integer
+          format: int32
+        payment_vehicle_restriction_months:
+          type: integer
+          format: int32
+        integrations:
+          type: object
+          properties:
+            autosys:
+              type: object
+            email:
+              type: object
+              properties:
+                domain:
+                  type: string
+                username:
+                  type: string
+                quote:
+                  type: integer
+                  format: int32
+                forwarding_email:
+                  type: string
+            sms:
+              type: integer
+              format: int32
+            vegvesen:
+              type: object
+            marketing:
+              type: object
+            accounting:
+              type: object
+              properties:
+                api_platform:
+                  type: string
+                api_data:
+                  type: string
+                department_code:
+                  type: string
+                is_two_way:
+                  type: boolean
+                status:
+                  type: string
+                  enum:
+                  - ACTIVE
+                  - DEACTIVATED
+        trade_permit:
+          type: object
+          properties:
+            new_vehicle:
+              type: object
+            used_vehicle:
+              type: object
+              properties:
+                police_country:
+                  type: string
+                police_destrict:
+                  type: string
+                expiry_date_unix:
+                  type: integer
+                  format: int32
+        www:
+          type: object
+          properties:
+            domain:
+              type: string
+            theme:
+              type: string
+            iframe:
+              type: boolean
+            has_full_website:
+              type: boolean
+        accounting_identifier:
+          type: string
+
+    Warranties:
+      type: object
+      properties:
+        warranty_id:
+          type: integer
+          format: int32
+        vehicle_type:
+          type: string
+          enum:
+            - USED_CAR
+            - NEW_CAR
+            - USED_MC
+            - NEW_MC
+            - MOBILEHOME
+            - CARAVAN
+            - TRAILER
+            - BUS
+            - LEASING
+            - CAR_AUCTION
+            - CAR_SUBSCRIPTION
+        vendor_name:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        coverage_months:
+          type: integer
+          format: int32
+        coverage_mileage:
+          type: integer
+          format: int32
+        max_coverage_mileage:
+          type: integer
+          format: int32
+        max_coverage_age:
+          type: integer
+          format: int32
+        price:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - DEACTIVATED
+
     Ad:
       type: object
       properties:
@@ -395,5 +1104,7 @@ components:
       type: apiKey
       in: header
       name: Token
+security:
+  - TokenHeader: []
 security:
   - TokenHeader: []
