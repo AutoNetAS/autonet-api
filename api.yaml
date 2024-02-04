@@ -1108,5 +1108,3 @@ components:
       type: apiKey
       in: header
       name: Token
-security:
-  - TokenHeader: []
