@@ -50,6 +50,13 @@ paths:
       tags:
         - Insurance
       description: Returns an insurance
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
       security:
         - TokenHeader: []
       responses:
@@ -242,6 +249,13 @@ paths:
       tags:
         - Warranty
       description: Returns a warranty
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
       security:
         - TokenHeader: []
       responses:
@@ -390,6 +404,13 @@ paths:
       tags:
         - Finance
       description: Returns a finance
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
       security:
         - TokenHeader: []
       responses:
@@ -1105,3 +1126,5 @@ components:
       type: apiKey
       in: header
       name: Token
+security:
+  - TokenHeader: []
