@@ -33,7 +33,414 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Company'
+                
+  /data/getMakes:
+    get:
+      tags:
+        - Metadata
+      summary: Get makes
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Makes data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      vehicle_type:
+                        type: string
+                        description: Mappings from getVehicleTypes endpoint
+                      value:
+                        type: string
+                      display:
+                        type: string
                   
+  /data/getMakes/{ID}:
+    get:
+      tags:
+        - Metadata
+      description: Get a make
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Gets make
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      vehicle_type:
+                        type: string
+                        description: Mappings from getVehicleTypes endpoint
+                      value:
+                        type: string
+                      display:
+                        type: string
+                  
+  /data/getMakeModels:
+    get:
+      tags:
+        - Metadata
+      summary: Get models
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Models data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+                  
+  /data/getMakeModels/{MAKE_ID}:
+    get:
+      tags:
+        - Metadata
+      description: Gets models by make
+      parameters:
+        - name: MAKE_ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Gets models
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+                  
+  /data/getMakeModels/{MAKE_ID}/{ID}:
+    get:
+      tags:
+        - Metadata
+      description: Gets model
+      parameters:
+        - name: MAKE_ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Gets model
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+          
+  /data/getVehicleTypes:
+    get:
+      tags:
+        - Metadata
+      summary: Get vehicle types
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Vehicle types data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      value:
+                        type: string
+                  
+  /data/getFuels:
+    get:
+      tags:
+        - Metadata
+      summary: Get fuel types
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Fuel types data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+                  
+  /data/getFuels/{ID}:
+    get:
+      tags:
+        - Metadata
+      description: Gets fuel type
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Gets fuel type
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+                  
+  /data/getColors:
+    get:
+      tags:
+        - Metadata
+      summary: Get colors
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Colors data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+                  
+  /data/getColors/{ID}:
+    get:
+      tags:
+        - Metadata
+      description: Gets color
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Gets color
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+                  
+  /data/getBodyTypes:
+    get:
+      tags:
+        - Metadata
+      summary: Get body types
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Body types data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+                  
+  /data/getBodyTypes/{ID}:
+    get:
+      tags:
+        - Metadata
+      description: Gets body type
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Gets body type
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+                  
+  /data/getTaxClasses:
+    get:
+      tags:
+        - Metadata
+      summary: Get tax classes
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Tax classes data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+                  
+  /data/getTaxClasses/{ID}:
+    get:
+      tags:
+        - Metadata
+      description: Gets tax class
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Gets tax class
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      value:
+                        type: string
+                      display:
+                        type: string
+
+                        
   /insurance/get:
     get:
       tags:
