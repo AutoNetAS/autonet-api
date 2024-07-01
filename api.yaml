@@ -1058,6 +1058,218 @@ paths:
                 $ref: '#/components/schemas/Ad'
         '404':
           description: Ad not found
+  /vehicle/get/{Identifier}:
+     get:
+      tags:
+        - Vehicles
+      summary: Get technical vehicle specifications
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: Identifier
+          in: path
+          required: true
+          description: License plate or VIN
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+        '404':
+          description: Not found
+  /vehicle/getOemEquipment/{Identifier}:
+     get:
+      tags:
+        - Vehicles
+      summary: Get OEM vehicle equipment list
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: Identifier
+          in: path
+          required: true
+          description: License plate or VIN
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      name:
+                        type: string
+        '404':
+          description: Not found
+  /vehicle/getServiceHistory/{Identifier}:
+     get:
+      tags:
+        - Vehicles
+      summary: Get Service History of vehicle
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: Identifier
+          in: path
+          required: true
+          description: License plate or VIN
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      mileage:
+                        type: integer
+                        format: int32
+                        description: Format is in kilometers, but if it is miles, it'll be handled serversided
+                      date:
+                        type: integer
+                        format: int32
+                      actions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            type:
+                              type: string
+                            description:
+                              type: string
+                      location:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          address:
+                            type: object
+                            properties:
+                              address:
+                                type: string
+                              postal_code:
+                                type: string
+                              city:
+                                type: string
+                              country:
+                                type: string
+        '404':
+          description: Not found
+  /vehicle/getOwners/{Identifier}:
+     get:
+      tags:
+        - Vehicles
+      summary: Get All Owners of vehicle
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: Identifier
+          in: path
+          required: true
+          description: License plate or VIN
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      type:
+                        type: string
+                        enum:
+                        - PERSON
+                        - COMPANY
+                      name:
+                        type: string
+                      dob:
+                        type: string
+                        format: date
+                        description: The date in Y-m-d format, only applicable if type is PERSON
+                      organization_number:
+                        type: integer
+                        format: int32
+                        description: Only applicable if type is COMPANY
+                      email:
+                        type: string
+                        description: Only for internal usage, connected with <Contacts> Model
+                      mobile:
+                        type: integer
+                        format: int32
+                        description: Only for internal usage, connected with <Contacts> Model
+                      address:
+                        type: object
+                        properties:
+                          address:
+                            type: string
+                          postal_code:
+                            type: string
+                          city:
+                            type: string
+                          country:
+                            type: string
+                      is_leasing:
+                        type: boolean
+                        default: false
+                      is_co_owner:
+                        type: boolean
+                        default: false
+                      creation_date:
+                        type: integer
+                        format: int32
+        '404':
+          description: Not found
+  /vehicle/getInsuranceClaims/{Identifier}:
+     get:
+      tags:
+        - Vehicles
+      summary: BETA! Get All records from the claims from the FOSS register
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: Identifier
+          in: path
+          required: true
+          description: License plate or VIN
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+        '404':
+          description: Not found
 components:
   schemas:
     Company:
