@@ -1083,7 +1083,7 @@ paths:
                     type: object
         '404':
           description: Not found
-  /vehicle/getOemEquipment/{Identifier}:
+  /vehicle/oemEquipment/{Identifier}:
      get:
       tags:
         - Vehicles
@@ -1113,7 +1113,7 @@ paths:
                         type: string
         '404':
           description: Not found
-  /vehicle/getServiceHistory/{Identifier}:
+  /vehicle/serviceHistory/{Identifier}:
      get:
       tags:
         - Vehicles
@@ -1174,7 +1174,7 @@ paths:
                                 type: string
         '404':
           description: Not found
-  /vehicle/getOwners/{Identifier}:
+  /vehicle/owners/{Identifier}:
      get:
       tags:
         - Vehicles
@@ -1245,7 +1245,7 @@ paths:
                         format: int32
         '404':
           description: Not found
-  /vehicle/getInsuranceClaims/{Identifier}:
+  /vehicle/insuranceClaims/{Identifier}:
      get:
       tags:
         - Vehicles
