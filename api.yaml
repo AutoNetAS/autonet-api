@@ -34,7 +34,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Company'
                 
-  /data/getMakes:
+  /data/makes:
     get:
       tags:
         - Metadata
@@ -62,7 +62,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getMakes/{ID}:
+  /data/makes/{ID}:
     get:
       tags:
         - Metadata
@@ -97,7 +97,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getMakeModels:
+  /data/makeModels:
     get:
       tags:
         - Metadata
@@ -122,7 +122,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getMakeModels/{MAKE_ID}:
+  /data/makeModels/{MAKE_ID}:
     get:
       tags:
         - Metadata
@@ -154,7 +154,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getMakeModels/{MAKE_ID}/{ID}:
+  /data/makeModels/{MAKE_ID}/{ID}:
     get:
       tags:
         - Metadata
@@ -192,7 +192,7 @@ paths:
                       display:
                         type: string
           
-  /data/getVehicleTypes:
+  /data/vehicleTypes:
     get:
       tags:
         - Metadata
@@ -212,7 +212,7 @@ paths:
                       value:
                         type: string
                   
-  /data/getFuels:
+  /data/fuels:
     get:
       tags:
         - Metadata
@@ -237,7 +237,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getFuels/{ID}:
+  /data/fuels/{ID}:
     get:
       tags:
         - Metadata
@@ -269,7 +269,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getColors:
+  /data/colors:
     get:
       tags:
         - Metadata
@@ -294,7 +294,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getColors/{ID}:
+  /data/colors/{ID}:
     get:
       tags:
         - Metadata
@@ -326,7 +326,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getBodyTypes:
+  /data/bodyTypes:
     get:
       tags:
         - Metadata
@@ -351,7 +351,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getBodyTypes/{ID}:
+  /data/bodyTypes/{ID}:
     get:
       tags:
         - Metadata
@@ -383,7 +383,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getTaxClasses:
+  /data/taxClasses:
     get:
       tags:
         - Metadata
@@ -408,7 +408,7 @@ paths:
                       display:
                         type: string
                   
-  /data/getTaxClasses/{ID}:
+  /data/taxClasses/{ID}:
     get:
       tags:
         - Metadata
