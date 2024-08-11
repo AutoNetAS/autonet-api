@@ -1270,6 +1270,180 @@ paths:
                     type: object
         '404':
           description: Not found
+  /leads/categories:
+     get:
+      tags:
+        - Leads
+      summary: Get All leads/mailbox categories
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      name:
+                        type: string
+        '404':
+          description: Not found
+  /leads/categories/{ID}:
+     get:
+      tags:
+        - Leads
+      summary: Get All leads/mailbox categories
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID
+          schema:
+            type: integer
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int32
+                      name:
+                        type: string
+        '404':
+          description: Not found
+  /leads/add:
+     post:
+      tags:
+        - Leads
+      summary: Insert lead
+      security:
+        - TokenHeader: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - source
+              - name
+              properties:
+                source:
+                  type: string
+                  description: The main source of the lead
+                  enum:
+                    - EMAIL
+                    - SMS_IN
+                    - TELEPHONE
+                    - FACEBOOK
+                    - CONTACT_FORM
+                    - FINN
+                name:
+                  type: string
+                  description: Overall description of lead
+                email:
+                  type: string
+                phone:
+                  type: string
+                  description: Max 8 chars, do not include +47, etc.
+                category_id:
+                  type: integer
+                  format: int32
+                assigned_member_ids:
+                  type: string
+                  format: JSON
+                  description: JSON encoded with member IDs, e.g., ["20004", "20008"]
+                vehicle_ids:
+                  type: string
+                  format: JSON
+                  description: JSON encoded with vehicle IDs, e.g., ["10004", "10008"]
+                priority:
+                  type: string
+                  enum:
+                    - LOW
+                    - MEDIUM
+                    - HIGH
+      responses:
+        '200':
+          description: Data
+          content:
+            application/json:
+              schema:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int32
+                      description: Lead ID
+  /leads/incoming/{ID}:
+     post:
+      tags:
+        - Leads
+      summary: Insert lead correspondance
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Lead ID
+          schema:
+            type: integer
+      security:
+        - TokenHeader: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - message_id
+              - source
+              - body
+              properties:
+                message_id:
+                  type: string
+                  description: Unique identifier per message, can for example me email/SMS UUID
+                source:
+                  type: string
+                  description: The main source of the lead
+                  enum:
+                    - EMAIL
+                    - SMS_IN
+                    - FACEBOOK
+                    - NOTE
+                subject:
+                  type: string
+                  description: Primarily used for emails
+                body:
+                  type: string
+                  format: html
+                  description: HTML content
+      responses:
+        '200':
+          description: Data
+          content:
+            application/json:
+              schema:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int32
+                      description: Correspondance ID
 components:
   schemas:
     Company:
