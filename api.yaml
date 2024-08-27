@@ -1034,6 +1034,184 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Ad'
+  /ad/get2:
+    get:
+      tags:
+        - Ads
+      summary: Get a list of all ads
+      description: /ad/get is to be deprecated on 2025-01-01, we are migrating to this endpoint which supports newer technologies such as cache layer, variables are optimized etc. for more effective fetching
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: search
+          in: query
+          description: Min 2 characters mass search
+          required: false
+          schema:
+            type: string
+        - name: rows_limit
+          in: query
+          description: Limit the number of rows returned
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 25
+            maximum: 100
+        - name: total_rows
+          in: query
+          description: Total number of rows available
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: order_by
+          in: query
+          description: Specify the field to order the results by
+          required: false
+          schema:
+            type: string
+            enum:
+              - update_date
+              - creation_date
+              - publish_date
+              - sale_type
+              - contact_id
+              - total_price
+        - name: order_direction
+          in: query
+          description: Specify the direction of sorting (e.g., ASC for ascending, DESC for descending)
+          required: false
+          schema:
+            type: string
+            enum:
+              - ASC
+              - DESC
+      responses:
+        '200':
+          description: Data
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      ads_id:
+                        type: integer
+                        format: int32
+                      vehicles_id:
+                        type: integer
+                        format: int32
+                      internal_id:
+                        type: integer
+                        format: int32
+                      sale_type:
+                        type: string
+                        enum:
+                          - USED_CAR
+                          - NEW_CAR
+                          - USED_MC
+                          - NEW_MC
+                          - MOBILEHOME
+                          - CARAVAN
+                          - TRAILER
+                          - BUS
+                          - LEASING
+                          - CAR_AUCTION
+                          - CAR_SUBSCRIPTION
+                      title:
+                        type: string
+                      registration_price:
+                        type: integer
+                        format: int32
+                      total_price:
+                        type: integer
+                        format: int32
+                      preferences:
+                        $ref: '#/components/schemas/Preferences'
+                      creation_date:
+                        type: integer
+                        format: int32
+                      update_date:
+                        type: integer
+                        format: int32
+                      publish_date:
+                        type: integer
+                        format: int32
+                      creation_member_id:
+                        type: integer
+                        format: int32
+                      update_member_id:
+                        type: integer
+                        format: int32
+                      publish_member_id:
+                        type: integer
+                        format: int32
+                      make_model:
+                        type: string
+                      license_number:
+                        type: string
+                      vin:
+                        type: string
+                      year:
+                        type: integer
+                        format: int32
+                      mileage:
+                        type: integer
+                        format: int32
+                      eu_last:
+                        type: integer
+                        format: int32
+                      eu_next:
+                        type: integer
+                        format: int32
+                      incoming_date:
+                        type: integer
+                        format: int32
+                      vehiclewarranty:
+                        type: string
+                      first_registration_date:
+                        type: string
+                        format: d/m/Y
+                      vehicle:
+                            type: object
+                            properties:
+                              type:
+                                type: string
+                              body:
+                                type: string
+                              registration_class:
+                                type: integer
+                                format: int32
+                              fuel:
+                                type: integer
+                                format: int32
+                              transmission:
+                                type: string
+                                enum:
+                                - A
+                                - M
+                              wheel_drive:
+                                type: string
+                                enum:
+                                - FOURWHEELEDRIVE
+                                - FRONTWHEELDRIVE
+                                - REARWHEELDRIVE
+                              exterior_color:
+                                type: integer
+                                format: int32
+                              weight:
+                                type: integer
+                                format: int32
+                      thumbnail_url:
+                        type: string
+                      svv_status:
+                        type: string
+                      ad_status:
+                        type: string
+                      vehicle_status:
+                        type: string
   /ad/get/{ID}:
      get:
       tags:
