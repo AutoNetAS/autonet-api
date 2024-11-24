@@ -1,6 +1,8 @@
 openapi: 3.0.0
 servers:
-  - description: AutoNet REST API
+  - description: Development
+    url: https://dev.autonet.no/rest/v1
+  - description: Production
     url: https://app.autonet.no/rest/v1
 info:
   description: >
