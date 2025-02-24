@@ -1222,9 +1222,9 @@ paths:
               required:
               - identifier
               properties:
-                identifier:
+                vehicle-number:
                   type: string
-                  description: License plate or VIN
+                  description: License plate, VIN or FINN code
                 type:
                   type: string
                   description: Type of add
