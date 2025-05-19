@@ -1181,6 +1181,68 @@ paths:
                 $ref: '#/components/schemas/Ad'
         '404':
           description: Ad not found
+          
+  /ad/upload:
+    post:
+      tags:
+        - Ads
+      summary: Upload media to an ad
+      description: |
+        Upload images, PDF documents, or link a YouTube video to an ad.  
+        * **type** decides which payload fields are required.  
+        * When *type* is **IMAGE** or **DOCUMENT**, attach the files as `multipart/form-data`.  
+        * When *type* is **VIDEO**, send a single YouTube video ID instead of files.
+      security:
+        - TokenHeader: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - IMAGE
+                    - DOCUMENT
+                    - VIDEO
+                  description: Select from IMAGE, DOCUMENT or VIDEO
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: |
+                    Needed only when **type** is **IMAGE** or **DOCUMENT**.  
+                    • **IMAGE** → image files (`image/*`) only.  
+                    • **DOCUMENT** → image files or PDFs (`image/*`, `application/pdf`).
+                youtube_id:
+                  type: string
+                  description: |
+                    Needed only when **type** is **VIDEO**.  
+                    Provide the 11-char ID from the YouTube URL.
+      responses:
+        '200':
+          description: Upload successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    enum:
+                      - SUCCESS
+                      - WARNING
+                      - ERROR
+                    example: "SUCCESS"
+                  message:
+                    type: string
+                    example: "3 files uploaded"
+          
   /vehicle/get/{Identifier}:
      get:
       tags:
