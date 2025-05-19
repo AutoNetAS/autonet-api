@@ -1182,7 +1182,7 @@ paths:
         '404':
           description: Ad not found
           
-  /ad/upload:
+  /ad/upload/{ID}:
     post:
       tags:
         - Ads
@@ -1192,6 +1192,13 @@ paths:
         * **type** decides which payload fields are required.  
         * When *type* is **IMAGE** or **DOCUMENT**, attach the files as `multipart/form-data`.  
         * When *type* is **VIDEO**, send a single YouTube video ID instead of files.
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Unique ID of the ad
+          schema:
+            type: integer
       security:
         - TokenHeader: []
       requestBody:
