@@ -1576,6 +1576,115 @@ paths:
         '404':
           description: Not found
           
+  /leads/get:
+    get:
+      tags:
+        - Leads
+      summary: Get all leads
+      description: Returns a list of all leads for the authenticated company
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: search
+          in: query
+          required: false
+          description: Optional search filter
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          description: Filter by lead status
+          schema:
+            type: string
+            enum:
+              - NEW
+              - COMPLETED
+              - CLOSED
+              - IN_PROGRESS
+        - name: category_id
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeadItem'
+        '404':
+          description: No leads found
+
+
+  /leads/get/{ID}:
+    get:
+      tags:
+        - Leads
+      summary: Get a specific lead
+      description: Returns a single lead by ID
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Lead ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lead found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeadItem'
+        '404':
+          description: Lead not found
+
+
+  /leads/getCorrespondence/{ID}:
+    get:
+      tags:
+        - Leads
+      summary: Get all correspondence for a lead
+      description: Returns emails, SMS, notes and FINN messages for a given lead
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: ID
+          in: path
+          required: true
+          description: Lead ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Correspondence list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeadCorrespondence'
+        '404':
+          description: No correspondence found
+
   /leads/categories:
      get:
       tags:
@@ -2476,6 +2585,133 @@ components:
             - ACTIVE
             - DEACTIVATED
           
+    LeadItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        sender_uuid:
+          type: string
+          nullable: true
+        category_id:
+          type: integer
+        contact_form_id:
+          type: integer
+        source:
+          type: string
+        assigned_members_ids:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+        vehicle:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        customer:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            email:
+              type: string
+            telephone:
+              type: string
+        is_prioritized:
+          type: boolean
+        is_starred:
+          type: boolean
+        is_opened:
+          type: boolean
+        is_last_customer_reply:
+          type: boolean
+        creation:
+          type: object
+          properties:
+            date:
+              type: integer
+            member_id:
+              type: integer
+            formatted:
+              type: string
+        update:
+          type: object
+          properties:
+            date:
+              type: integer
+            member_id:
+              type: integer
+            formatted:
+              type: string
+        follow_up_date:
+          type: integer
+        status:
+          type: string
+          enum:
+            - NEW
+            - COMPLETED
+            - CLOSED
+            - IN_PROGRESS
+    LeadCorrespondence:
+      type: object
+      properties:
+        company_id:
+          type: integer
+        type:
+          type: string
+        id:
+          type: string
+        source:
+          type: string
+        source_name:
+          type: string
+        avatar:
+          type: string
+        title:
+          type: string
+          nullable: true
+        content:
+          type: string
+          description: HTML content
+        identifier:
+          type: string
+          nullable: true
+        submittedData:
+          type: object
+        time:
+          type: string
+        unit_time:
+          type: integer
+        priority:
+          type: string
+        assigned_to:
+          type: integer
+        remind_on_time:
+          type: integer
+        creation_member_id:
+          type: string
+        creation_ip_address:
+          type: string
+          nullable: true
+        is_incoming:
+          type: boolean
+        sent:
+          type: boolean
+        ses_status:
+          type: string
+          nullable: true
+        status:
+          type: integer
+
     MediaItem:
       type: object
       properties:
