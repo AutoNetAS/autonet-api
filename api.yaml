@@ -1599,9 +1599,10 @@ paths:
             type: string
             enum:
               - NEW
-              - COMPLETED
+              - ONGOING
+              - WAITING_ON_CUSTOMER
               - CLOSED
-              - IN_PROGRESS
+              - COMPLETED
         - name: category_id
           in: query
           required: false
