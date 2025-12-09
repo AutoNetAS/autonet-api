@@ -1181,6 +1181,28 @@ paths:
                 $ref: '#/components/schemas/Ad'
         '404':
           description: Ad not found
+
+  /ad/defaultDescription:
+    get:
+      tags:
+        - Ads
+      summary: Get the default description template
+      description: Returns the default HTML description used by certain dealerships or templates
+      security:
+        - TokenHeader: []
+      responses:
+        '200':
+          description: Default HTML description
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  description:
+                    type: string
+                    description: HTML content
+        '404':
+          description: Not found
           
   /ad/upload/{ID}:
     post:
