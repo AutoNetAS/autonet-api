@@ -1277,6 +1277,7 @@ paths:
       tags:
         - Vehicles
       summary: Get technical vehicle specifications
+      description: Cost per call NOK 0.50
       security:
         - TokenHeader: []
       parameters:
