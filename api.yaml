@@ -2075,7 +2075,7 @@ paths:
           description: Invalid upload
         '401':
           description: Unauthorized
-                      
+
   /autoforecast/predict:
     post:
       tags:
