@@ -1327,9 +1327,12 @@ paths:
                     - BROKERAGE
                     - TRADEIN
                     - IMPORT
-                create_ad:
-                  type: boolean
-                  default: true
+                status:
+                  type: string
+                  enum:
+                    - DRAFT
+                    - COMING_SOON
+                    - IN_STOCK
                 mileage:
                   type: integer
                   format: int32
