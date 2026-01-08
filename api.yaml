@@ -1930,6 +1930,151 @@ paths:
                       type: integer
                       format: int32
                       description: Correspondance ID
+
+  /documents/get/{table}/{tableID}:
+    get:
+      tags:
+        - Documents
+      summary: Get uploaded documents
+      description: Returns all uploaded documents linked to a table and table ID
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: table
+          in: path
+          required: true
+          description: Reference table
+          schema:
+            type: string
+            enum:
+              - leads
+              - vehicles
+              - contracts
+              - leads_email_files
+          schema:
+            type: string
+        - name: tableID
+          in: path
+          required: true
+          description: Reference table ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Documents list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    company_id:
+                      type: integer
+                    reference_table:
+                      type: string
+                    reference_id:
+                      type: integer
+                    relation_table:
+                      type: string
+                      nullable: true
+                    relation_id:
+                      type: integer
+                    url:
+                      type: string
+                      format: uri
+                    description:
+                      type: string
+                      nullable: true
+                    password:
+                      type: string
+                      nullable: true
+                    position:
+                      type: integer
+                    creation_date:
+                      type: integer
+                      format: int64
+                    creation_member_id:
+                      type: integer
+                    creation_ip_address:
+                      type: string
+        '404':
+          description: No documents found
+
+  /documents/upload/{table}/{tableID}:
+    post:
+      tags:
+        - Documents
+      summary: Upload documents
+      description: Upload one or more documents (PDF or images) to a table reference
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: table
+          in: path
+          required: true
+          description: Reference table
+          schema:
+            type: string
+            enum:
+              - leads
+              - vehicles
+              - contracts
+              - leads_email_files
+        - name: tableID
+          in: path
+          required: true
+          description: Reference table ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - multiple_files
+              properties:
+                multiple_files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Multiple files (PDF or images)
+      responses:
+        '200':
+          description: Upload successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Opplastning fullført.
+                  urls:
+                    type: array
+                    items:
+                      type: string
+                      format: uri
+                  ids:
+                    type: array
+                    items:
+                      type: integer
+                  data:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: Invalid upload
+        '401':
+          description: Unauthorized
                       
   /autoforecast/predict:
     post:
