@@ -1951,8 +1951,6 @@ paths:
               - vehicles
               - contracts
               - leads_email_files
-          schema:
-            type: string
         - name: tableID
           in: path
           required: true
