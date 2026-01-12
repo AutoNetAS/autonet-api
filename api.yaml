@@ -1182,6 +1182,31 @@ paths:
         '404':
           description: Ad not found
 
+  /ad/getByVehicleId/{vehicleID}:
+     get:
+      tags:
+        - Ads
+      summary: Get a specific ad
+      description: Returns a specific car sale ad based on the provided vehicle ID
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: vehicleID
+          in: path
+          required: true
+          description: Unique vehicle ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A specific ad
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ad'
+        '404':
+          description: Ad not found
+
   /ad/defaultDescription:
     get:
       tags:
