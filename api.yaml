@@ -1207,6 +1207,63 @@ paths:
         '404':
           description: Ad not found
 
+  /ad/getByIdentifier/{Identifier}:
+     get:
+      tags:
+        - Ads
+      summary: Get ad by identifier
+      description: Returns ad information based on license plate or VIN
+      security:
+        - TokenHeader: []
+      parameters:
+        - name: Identifier
+          in: path
+          required: true
+          description: License plate or VIN
+          schema:
+            type: string
+            example: EL23061
+      responses:
+        '200':
+          description: Ad found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    vehicle_id:
+                      type: integer
+                      format: int32
+                      example: 3488
+                    ad_id:
+                      type: integer
+                      format: int32
+                      example: 2478
+                    license_number:
+                      type: string
+                      example: EL23061
+                    vin:
+                      type: string
+                      example: 5YJSA2DN2DFP14338
+                    status:
+                      type: string
+                      enum:
+                        - DRAFT
+                        - COMING_SOON
+                        - IN_STOCK
+                        - SOLD
+                        - DEACTIVATED
+                      example: COMING_SOON
+                    creation_date:
+                      type: integer
+                      format: int64
+                      description: Unix timestamp
+                      example: 1776329266
+        '404':
+          description: Ad not found
+
   /ad/defaultDescription:
     get:
       tags:
