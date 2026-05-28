@@ -1354,26 +1354,22 @@ paths:
                     type: string
                     example: "3 files uploaded"
 
-    /ad/deleteUpload/{ID}/{mediaId}:
-      delete:
-        tags:
-          - Ads
+    /ad/deleteUpload/{ID}:                                                                                                                                                                                    
+      delete:                                                                                                                                                                                                 
+        tags:                                                                                                                                                                                                 
+          - Ads                                                                                                                                                                                             
         summary: Delete media from an ad
         description: |
-          Deletes an image, video, or document from an ad.
+          Deletes one or more images, videos, or documents from an ad.
           * **IMAGE** / **VIDEO** — removes media from storage (and from FINN if the ad is for sale).
           * **DOCUMENT** — removes the uploaded document from storage.
+
+          Returns per-ID results so the caller knows which deletions succeeded or failed.
         parameters:
           - name: ID
             in: path
             required: true
             description: Unique ID of the ad
-            schema:
-              type: integer
-          - name: mediaId
-            in: path
-            required: true
-            description: Unique ID of the media item to delete
             schema:
               type: integer
           - name: type
@@ -1388,9 +1384,25 @@ paths:
                 - DOCUMENT
         security:
           - TokenHeader: []
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - media_ids
+                properties:
+                  media_ids:
+                    type: array
+                    items:
+                      type: integer
+                      format: int32
+                    description: Array of media IDs to delete
+                    example: [101, 102, 103]
         responses:
           '200':
-            description: Delete result
+            description: Deletion results per media ID
             content:
               application/json:
                 schema:
@@ -1400,15 +1412,30 @@ paths:
                       type: string
                       enum:
                         - SUCCESS
-                        - WARNING
-                        - ERROR
                       example: "SUCCESS"
-                    message:
-                      type: string
-                      example: "Media deleted"
+                    results:
+                      type: object
+                      description: Keyed by media ID, each value contains the result of that deletion
+                      additionalProperties:
+                        type: object
+                        properties:
+                          response:
+                            type: string
+                            enum:
+                              - SUCCESS
+                              - ERROR
+                          message:
+                            type: string
+                      example:
+                        101:
+                          response: "SUCCESS"
+                          message: "Media deleted"
+                        102:
+                          response: "ERROR"
+                          message: "Media not found"
           '404':
             description: Ad not found
-          
+            
   /vehicle/get/{Identifier}:
      get:
       tags:
