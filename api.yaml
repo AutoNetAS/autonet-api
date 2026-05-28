@@ -1,9 +1,9 @@
 openapi: 3.0.0
 servers:
-  - description: Development
-    url: https://dev.autonet.no/rest/v1
   - description: Production
     url: https://app.autonet.no/rest/v1
+  - description: Development
+    url: https://dev.autonet.no/rest/v1
 info:
   description: >
     API for accessing dealer data from AutoNet. This API uses token-based authentication. 
@@ -1354,10 +1354,10 @@ paths:
                     type: string
                     example: "3 files uploaded"
 
-    /ad/deleteUpload/{ID}:                                                                                                                                                                                    
-      delete:                                                                                                                                                                                                 
-        tags:                                                                                                                                                                                                 
-          - Ads                                                                                                                                                                                             
+  /ad/deleteUpload/{ID}:
+      delete:
+        tags:
+          - Ads
         summary: Delete media from an ad
         description: |
           Deletes one or more images, videos, or documents from an ad.
