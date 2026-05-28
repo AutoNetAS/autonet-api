@@ -1353,6 +1353,61 @@ paths:
                   message:
                     type: string
                     example: "3 files uploaded"
+
+    /ad/deleteUpload/{ID}/{mediaId}:
+      delete:
+        tags:
+          - Ads
+        summary: Delete media from an ad
+        description: |
+          Deletes an image, video, or document from an ad.
+          * **IMAGE** / **VIDEO** — removes media from storage (and from FINN if the ad is for sale).
+          * **DOCUMENT** — removes the uploaded document from storage.
+        parameters:
+          - name: ID
+            in: path
+            required: true
+            description: Unique ID of the ad
+            schema:
+              type: integer
+          - name: mediaId
+            in: path
+            required: true
+            description: Unique ID of the media item to delete
+            schema:
+              type: integer
+          - name: type
+            in: query
+            required: true
+            description: The type of media to delete
+            schema:
+              type: string
+              enum:
+                - IMAGE
+                - VIDEO
+                - DOCUMENT
+        security:
+          - TokenHeader: []
+        responses:
+          '200':
+            description: Delete result
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    response:
+                      type: string
+                      enum:
+                        - SUCCESS
+                        - WARNING
+                        - ERROR
+                      example: "SUCCESS"
+                    message:
+                      type: string
+                      example: "Media deleted"
+          '404':
+            description: Ad not found
           
   /vehicle/get/{Identifier}:
      get:
