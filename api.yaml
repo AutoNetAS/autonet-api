@@ -1,269 +1,238 @@
 openapi: 3.0.0
-servers:
-  - description: Production
-    url: https://app.autonet.no/rest/v1
-  - description: Development
-    url: https://dev.autonet.no/rest/v1
 info:
-  description: >
-    API for accessing dealer data from AutoNet. This API uses token-based authentication. 
-    To access any endpoint, clients must include a 'Token' header with the token found 
-    [here](https://app.autonet.no/page/company) under the "API Access" tab.
-  version: "1.0.0"
-  title: AutoNet API
-  contact:
-    email: zk@autonet.no
-  license:
-    name: Apache 2.0
-    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+  title: AutoNet REST API
+  description: |
+    REST API for the AutoNet Dealer Management System. Manage ads, vehicles, contracts, deals, leads, members, documents, and reference data.
+
+    ## Authentication
+
+    All requests require an API token passed via the `token` header:
+
+    ```
+    token: YOUR_API_TOKEN
+    ```
+
+    Tokens are managed in **Company Settings > API Access** in the AutoNet portal. Each token has scopes (e.g. `deals`, `contract`, `ad`) that control access.
+
+    ## Rate Limiting
+
+    - **500 requests per day** per token
+    - Headers included in every response:
+      - `X-RateLimit-Limit` — Max requests per day
+      - `X-RateLimit-Remaining` — Remaining requests
+      - `X-RateLimit-Reset` — Unix timestamp when limit resets
+    - Exceeding the limit returns `429 Too Many Requests`
+
+    ## Response Format
+
+    All JSON responses include a `response` field:
+
+    ```json
+    { "response": "success", "data": { ... } }
+    ```
+
+    ```json
+    { "response": "error", "message": "Error description" }
+    ```
+
+    ## Available Scopes
+
+    | Scope | Description |
+    |---|---|
+    | `ad` | Ads management — list, get, create, upload media |
+    | `vehicle` | Vehicle lookup — registration data, equipment, service history, owners |
+    | `contract` | Contracts — CRUD, sign/complete, PDF documents |
+    | `deals` | Deals/offers — CRUD, status management |
+    | `leads` | Leads/CRM — list, create, correspondence |
+    | `member` | Team members — list members |
+    | `data` | Reference data — makes, models, fuels, colors, body types |
+    | `documents` | Document uploads — get and upload files |
+  version: 1.0.0
+
+servers:
+  - url: https://api.autonet.no/rest/v1
+    description: Production
+
+tags:
+  - name: Ads
+    description: |
+      Manage vehicle ads/listings. Scope: `ad`
+
+      **Statuses:** `FOR_SALE`, `RESERVED`, `SOLD`, `DRAFT`, `COMING_SOON`, `IN_STOCK`, `INACTIVE`
+
+  - name: Vehicles
+    description: |
+      Vehicle lookup from Norwegian public registries (Vegvesen, Brønnøysund). Scope: `vehicle`
+
+      Lookup by license plate or VIN. Returns technical data, liens, equipment, service history, and ownership info.
+
+  - name: Contracts
+    description: |
+      Manage vehicle contracts (kontrakter). Scope: `contract`
+
+      **Types:** `SALE`, `PURCHASE`, `SPECIAL_PURCHASE`, `BROKERAGE`, `COMMISION`
+
+      **Statuses:** `DRAFT` → `CONTRACT_SIGNED` → `COMPLETED`
+
+  - name: Deals
+    description: |
+      Manage deal offers (tilbud). Scope: `deals`
+
+      **Offer types:** `salg` (sale), `innkjop` (purchase), `kommisjon` (commission), `formidling` (brokerage)
+
+      **Statuses:** `draft` → `sent` → `accepted` / `declined` → `converted`
+
+  - name: Leads
+    description: |
+      CRM leads management. Scope: `leads`
+
+      Create leads, add correspondence, send messages, and manage categories.
+
+  - name: Members
+    description: |
+      Team members. Scope: `member`
+
+      List company members with contact info, permissions, and notification settings.
+
+  - name: Data
+    description: |
+      Reference/lookup data. Scope: `data`
+
+      Vehicle makes, models, fuels, colors, body types, tax classes, and vehicle types.
+
+  - name: Documents
+    description: |
+      File uploads and retrieval. Scope: `documents`
+
+      Upload and retrieve documents attached to various entities (ads, contracts, leads, etc.).
+
+# ═══════════════════════════════════════════════════════════════════════
+#  ADS
+# ═══════════════════════════════════════════════════════════════════════
 
 paths:
+
   /ad/get:
     get:
-      tags:
-        - Ads
-      summary: Get a list of all ads
-      security:
-        - TokenHeader: []
+      tags: [Ads]
+      summary: List ads
+      description: |
+        Returns ads filtered by status. Supports search, pagination, and sorting.
+      operationId: adList
       parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            default: FOR_SALE
+            enum: [FOR_SALE, RESERVED, SOLD, DRAFT, COMING_SOON, IN_STOCK, INACTIVE]
         - name: search
           in: query
-          description: Min 2 characters mass search
-          required: false
           schema:
             type: string
+          description: Search by make, model, registration number, etc.
         - name: rows_limit
           in: query
-          description: Limit the number of rows returned
-          required: false
           schema:
             type: integer
-            format: int32
-            default: 25
-            maximum: 100
+            default: 100
+          description: Max number of results
         - name: total_rows
           in: query
-          description: Total number of rows available
-          required: false
           schema:
             type: integer
-            format: int32
+          description: If set, includes total count
         - name: order_by
           in: query
-          description: Specify the field to order the results by
-          required: false
           schema:
             type: string
-            enum:
-              - update_date
-              - creation_date
-              - publish_date
-              - sale_type
-              - contact_id
-              - total_price
+          description: Field to sort by
         - name: order_direction
           in: query
-          description: Specify the direction of sorting (e.g., ASC for ascending, DESC for descending)
-          required: false
           schema:
             type: string
-            enum:
-              - ASC
-              - DESC
+            enum: [ASC, DESC]
       responses:
-        '200':
-          description: Data
+        "200":
+          description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    ads_id:
-                      type: integer
-                      format: int32
-                    vehicles_id:
-                      type: integer
-                      format: int32
-                    internal_id:
-                      type: integer
-                      format: int32
-                    sale_type:
-                      type: string
-                      enum:
-                        - USED_CAR
-                        - NEW_CAR
-                        - USED_MC
-                        - NEW_MC
-                        - MOBILEHOME
-                        - CARAVAN
-                        - TRAILER
-                        - BUS
-                        - LEASING
-                        - CAR_AUCTION
-                        - CAR_SUBSCRIPTION
-                    title:
-                      type: string
-                    registration_price:
-                      type: integer
-                      format: int32
-                    total_price:
-                      type: integer
-                      format: int32
-                    preferences:
-                      $ref: '#/components/schemas/Preferences'
-                    creation_date:
-                      type: integer
-                      format: int32
-                    update_date:
-                      type: integer
-                      format: int32
-                    publish_date:
-                      type: integer
-                      format: int32
-                    creation_member_id:
-                      type: integer
-                      format: int32
-                    update_member_id:
-                      type: integer
-                      format: int32
-                    publish_member_id:
-                      type: integer
-                      format: int32
-                    make_model:
-                      type: string
-                    license_number:
-                      type: string
-                    vin:
-                      type: string
-                    year:
-                      type: integer
-                      format: int32
-                    mileage:
-                      type: integer
-                      format: int32
-                    eu_last:
-                      type: integer
-                      format: int32
-                    eu_next:
-                      type: integer
-                      format: int32
-                    incoming_date:
-                      type: integer
-                      format: int32
-                    vehiclewarranty:
-                      type: string
-                    first_registration_date:
-                      type: string
-                      format: d/m/Y
-                    vehicle:
-                      type: object
-                      properties:
-                        type:
-                          type: string
-                        body:
-                          type: string
-                        registration_class:
-                          type: integer
-                          format: int32
-                        fuel:
-                          type: integer
-                          format: int32
-                        transmission:
-                          type: string
-                          enum:
-                            - A
-                            - M
-                        wheel_drive:
-                          type: string
-                          enum:
-                            - FOURWHEELEDRIVE
-                            - FRONTWHEELDRIVE
-                            - REARWHEELDRIVE
-                        exterior_color:
-                          type: integer
-                          format: int32
-                        weight:
-                          type: integer
-                          format: int32
-                    thumbnail_url:
-                      type: string
-                    svv_status:
-                      type: string
-                    ad_status:
-                      type: string
-                    vehicle_status:
-                      type: string
-  /ad/get/{ID}:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /ad/get/{id}:
     get:
-      tags:
-        - Ads
-      summary: Get a specific ad
-      description: Returns a specific car sale ad based on the provided ID
-      security:
-        - TokenHeader: []
+      tags: [Ads]
+      summary: Get ad by ID
+      description: Returns a single ad with full details.
+      operationId: adGet
       parameters:
-        - name: ID
+        - name: id
           in: path
           required: true
-          description: Unique ID of the ad
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            default: FOR_SALE
+            enum: [FOR_SALE, RESERVED, SOLD, DRAFT, COMING_SOON, IN_STOCK, INACTIVE]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /ad/getByVehicleId/{vehicleId}:
+    get:
+      tags: [Ads]
+      summary: Get ad by vehicle ID
+      description: Returns the ad associated with a vehicle.
+      operationId: adGetByVehicleId
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
           schema:
             type: integer
       responses:
-        '200':
-          description: A specific ad
+        "200":
+          description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Ad'
-        '404':
-          description: Ad not found
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
-  /ad/getByVehicleId/{vehicleID}:
+  /ad/getByIdentifier/{identifier}:
     get:
-      tags:
-        - Ads
-      summary: Get a specific ad
-      description: Returns a specific car sale ad based on the provided vehicle ID
-      security:
-        - TokenHeader: []
+      tags: [Ads]
+      summary: Find ad by license plate or VIN
+      description: |
+        Searches for vehicles by license plate or VIN and returns matching ads. Results are ordered by status priority (FOR_SALE first).
+      operationId: adGetByIdentifier
       parameters:
-        - name: vehicleID
+        - name: identifier
           in: path
           required: true
-          description: Unique vehicle ID
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: A specific ad
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Ad'
-        '404':
-          description: Ad not found
-
-  /ad/getByIdentifier/{Identifier}:
-    get:
-      tags:
-        - Ads
-      summary: Get ad by identifier
-      description: Returns ad information based on license plate or VIN
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: Identifier
-          in: path
-          required: true
-          description: License plate or VIN
           schema:
             type: string
-            example: EL23061
+          description: License plate number or VIN
       responses:
-        '200':
-          description: Ad found
+        "200":
+          description: OK
           content:
             application/json:
               schema:
@@ -273,983 +242,140 @@ paths:
                   properties:
                     vehicle_id:
                       type: integer
-                      format: int32
-                      example: 3488
                     ad_id:
                       type: integer
-                      format: int32
-                      example: 2478
+                      nullable: true
                     license_number:
                       type: string
-                      example: EL23061
                     vin:
                       type: string
-                      example: 5YJSA2DN2DFP14338
                     status:
                       type: string
-                      enum:
-                        - DRAFT
-                        - COMING_SOON
-                        - IN_STOCK
-                        - SOLD
-                        - DEACTIVATED
-                      example: COMING_SOON
                     creation_date:
                       type: integer
-                      format: int64
-                      description: Unix timestamp
-                      example: 1776329266
-        '404':
-          description: Ad not found
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /ad/defaultDescription:
     get:
-      tags:
-        - Ads
-      summary: Get the default description template
-      description: Returns the default HTML description used by certain dealerships or templates
-      security:
-        - TokenHeader: []
+      tags: [Ads]
+      summary: Get default ad description
+      description: Returns the company's default ad description text.
+      operationId: adDefaultDescription
       responses:
-        '200':
-          description: Default HTML description
+        "200":
+          description: OK
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  description:
-                    type: string
-                    description: HTML content
-        '404':
-          description: Not found
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
-  /ad/upload/{ID}:
+  /ad/add:
     post:
-      tags:
-        - Ads
-      summary: Upload media to an ad
+      tags: [Ads]
+      summary: Create ad
       description: |
-        Upload images, PDF documents, or link a YouTube video to an ad.  
-        * **type** decides which payload fields are required.  
-        * When *type* is **IMAGE** or **DOCUMENT**, attach the files as `multipart/form-data`.  
-        * When *type* is **VIDEO**, send a single YouTube video ID instead of files.
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID of the ad
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
+        Creates a new vehicle and ad listing. Performs VIN/registration lookup and creates the vehicle record.
+      operationId: adAdd
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/x-www-form-urlencoded:
             schema:
               type: object
-              required:
-                - type
               properties:
-                type:
+                identifier:
                   type: string
-                  enum:
-                    - IMAGE
-                    - DOCUMENT
-                    - VIDEO
-                  description: Select from IMAGE, DOCUMENT or VIDEO
-                files:
-                  type: array
-                  items:
-                    type: string
-                    format: binary
-                  description: |
-                    Needed only when **type** is **IMAGE** or **DOCUMENT**.  
-                    • **IMAGE** → image files (`image/*`) only.  
-                    • **DOCUMENT** → image files or PDFs (`image/*`, `application/pdf`).
-                youtube_id:
-                  type: string
-                  description: |
-                    Needed only when **type** is **VIDEO**.  
-                    Provide the 11-char ID from the YouTube URL.
+                  description: License plate or VIN
       responses:
-        '200':
-          description: Upload successful
+        "200":
+          description: Created
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  response:
-                    type: string
-                    enum:
-                      - SUCCESS
-                      - WARNING
-                      - ERROR
-                    example: "SUCCESS"
-                  message:
-                    type: string
-                    example: "3 files uploaded"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
-  /ad/deleteUpload/{ID}:
-    delete:
-      tags:
-        - Ads
-      summary: Delete media from an ad
+  /ad/upload/{id}:
+    post:
+      tags: [Ads]
+      summary: Upload media to ad
       description: |
-        Deletes one or more images, videos, or documents from an ad.
-        * **IMAGE** / **VIDEO** — removes media from storage (and from FINN if the ad is for sale).
-        * **DOCUMENT** — removes the uploaded document from storage.
-        
-        Returns per-ID results so the caller knows which deletions succeeded or failed.
+        Upload images, videos, or documents to an ad.
+
+        - `IMAGE`: Upload image files via multipart form
+        - `VIDEO`: Provide a YouTube video ID
+        - `DOCUMENT`: Upload document files via multipart form
+      operationId: adUpload
       parameters:
-        - name: ID
+        - name: id
           in: path
           required: true
-          description: Unique ID of the ad
           schema:
             type: integer
+          description: Ad ID
         - name: type
           in: query
           required: true
-          description: The type of media to delete
           schema:
             type: string
-            enum:
-              - IMAGE
-              - VIDEO
-              - DOCUMENT
-      security:
-        - TokenHeader: []
+            enum: [IMAGE, VIDEO, DOCUMENT]
       requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - media_ids
-              properties:
-                media_ids:
-                  type: array
-                  items:
-                    type: integer
-                    format: int32
-                  description: Array of media IDs to delete
-                  example: [101, 102, 103]
-      responses:
-        '200':
-          description: Deletion results per media ID
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  response:
-                    type: string
-                    enum:
-                      - SUCCESS
-                    example: "SUCCESS"
-                  results:
-                    type: object
-                    description: Keyed by media ID, each value contains the result of that deletion
-                    additionalProperties:
-                      type: object
-                      properties:
-                        response:
-                          type: string
-                          enum:
-                            - SUCCESS
-                            - ERROR
-                        message:
-                          type: string
-                    example:
-                      101:
-                        response: "SUCCESS"
-                        message: "Media deleted"
-                      102:
-                        response: "ERROR"
-                        message: "Media not found"
-        '404':
-          description: Ad not found
-
-  /vehicle/get/{Identifier}:
-    get:
-      tags:
-        - Vehicles
-      summary: Get technical vehicle specifications
-      description: Cost per call NOK 0.50
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: Identifier
-          in: path
-          required: true
-          description: License plate or VIN
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-        '404':
-          description: Not found
-  /vehicle/add:
-    post:
-      tags:
-        - Vehicles
-      summary: Add a new vehicle
-      security:
-        - TokenHeader: []
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required:
-                - identifier
-              properties:
-                vehicle-number:
-                  type: string
-                  description: License plate, VIN or FINN code
-                type:
-                  type: string
-                  description: Type of add
-                  enum:
-                    - NULL
-                    - PURCHASE
-                    - COMMISION
-                    - BROKERAGE
-                    - TRADEIN
-                    - IMPORT
-                status:
-                  type: string
-                  enum:
-                    - DRAFT
-                    - COMING_SOON
-                    - IN_STOCK
-                mileage:
-                  type: integer
-                  format: int32
-                address_id:
-                  type: integer
-                  format: int32
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                    format: int32
-                    description: Lead ID
-
-  /vehicle/oemEquipment/{Identifier}:
-    get:
-      tags:
-        - Vehicles
-      summary: Get OEM vehicle equipment list
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: Identifier
-          in: path
-          required: true
-          description: License plate or VIN
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    code:
-                      type: string
-                    name:
-                      type: string
-        '404':
-          description: Not found
-  /vehicle/serviceHistory/{Identifier}:
-    get:
-      tags:
-        - Vehicles
-      summary: Get Service History of vehicle
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: Identifier
-          in: path
-          required: true
-          description: License plate or VIN
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    mileage:
-                      type: integer
-                      format: int32
-                      description: Format is in kilometers, but if it is miles, it'll be handled serversided
-                    date:
-                      type: integer
-                      format: int32
-                    actions:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          type:
-                            type: string
-                          description:
-                            type: string
-                    location:
-                      type: object
-                      properties:
-                        name:
-                          type: string
-                        address:
-                          type: object
-                          properties:
-                            address:
-                              type: string
-                            postal_code:
-                              type: string
-                            city:
-                              type: string
-                            country:
-                              type: string
-        '404':
-          description: Not found
-  /vehicle/owners/{Identifier}:
-    get:
-      tags:
-        - Vehicles
-      summary: Get All Owners of vehicle
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: Identifier
-          in: path
-          required: true
-          description: License plate or VIN
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    type:
-                      type: string
-                      enum:
-                        - PERSON
-                        - COMPANY
-                    name:
-                      type: string
-                    dob:
-                      type: string
-                      format: date
-                      description: The date in Y-m-d format, only applicable if type is PERSON
-                    organization_number:
-                      type: integer
-                      format: int32
-                      description: Only applicable if type is COMPANY
-                    email:
-                      type: string
-                      description: Only for internal usage, connected with <Contacts> Model
-                    mobile:
-                      type: integer
-                      format: int32
-                      description: Only for internal usage, connected with <Contacts> Model
-                    address:
-                      type: object
-                      properties:
-                        address:
-                          type: string
-                        postal_code:
-                          type: string
-                        city:
-                          type: string
-                        country:
-                          type: string
-                    is_leasing:
-                      type: boolean
-                      default: false
-                    is_co_owner:
-                      type: boolean
-                      default: false
-                    creation_date:
-                      type: integer
-                      format: int32
-        '404':
-          description: Not found
-  /vehicle/insuranceClaims/{Identifier}:
-    get:
-      tags:
-        - Vehicles
-      summary: BETA! Get All records from the claims from the FOSS register
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: Identifier
-          in: path
-          required: true
-          description: License plate or VIN
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-        '404':
-          description: Not found
-
-  /member/get:
-    get:
-      tags:
-        - Members
-      summary: Get All members
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    first_name:
-                      type: string
-                    last_name:
-                      type: string
-                    email:
-                      type: string
-                    telephone:
-                      type: string
-                    date_of_birth:
-                      type: string
-                      default: Y-m-d
-                    address:
-                      type: object
-                      properties:
-                        street:
-                          type: string
-                        postal_code:
-                          type: string
-                        city:
-                          type: string
-                        country:
-                          type: string
-                    postal_code:
-                      type: integer
-                      format: int32
-                    city:
-                      type: string
-                    job_name:
-                      type: string
-                    profile_picture_url:
-                      type: string
-                    2fa_activated:
-                      type: boolean
-                    permissions:
-                      type: string
-                    notifications:
-                      type: string
-                    active:
-                      type: boolean
-        '404':
-          description: Not found
-
-  /leads/get:
-    get:
-      tags:
-        - Leads
-      summary: Get all leads
-      description: Returns a list of all leads for the authenticated company
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: search
-          in: query
-          required: false
-          description: Optional search filter
-          schema:
-            type: string
-        - name: status
-          in: query
-          required: false
-          description: Filter by lead status
-          schema:
-            type: string
-            enum:
-              - NEW
-              - ONGOING
-              - WAITING_ON_CUSTOMER
-              - CLOSED
-              - COMPLETED
-        - name: category_id
-          in: query
-          required: false
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: List of leads
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  total:
-                    type: integer
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/LeadItem'
-        '404':
-          description: No leads found
-
-
-  /leads/get/{ID}:
-    get:
-      tags:
-        - Leads
-      summary: Get a specific lead
-      description: Returns a single lead by ID
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Lead ID
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Lead found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  total:
-                    type: integer
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/LeadItem'
-        '404':
-          description: Lead not found
-
-
-  /leads/getCorrespondence/{ID}:
-    get:
-      tags:
-        - Leads
-      summary: Get all correspondence for a lead
-      description: Returns emails, SMS, notes and FINN messages for a given lead
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Lead ID
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Correspondence list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LeadCorrespondence'
-        '404':
-          description: No correspondence found
-
-  /leads/categories:
-    get:
-      tags:
-        - Leads
-      summary: Get All leads/mailbox categories
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    name:
-                      type: string
-        '404':
-          description: Not found
-  /leads/categories/{ID}:
-    get:
-      tags:
-        - Leads
-      summary: Get All leads/mailbox categories
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    name:
-                      type: string
-        '404':
-          description: Not found
-  /leads/add:
-    post:
-      tags:
-        - Leads
-      summary: Insert lead
-      security:
-        - TokenHeader: []
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required:
-                - source
-                - name
-              properties:
-                source:
-                  type: string
-                  description: The main source of the lead
-                  enum:
-                    - EMAIL
-                    - SMS_IN
-                    - TELEPHONE
-                    - FACEBOOK
-                    - CONTACT_FORM
-                    - FINN
-                name:
-                  type: string
-                  description: Overall description of lead
-                email:
-                  type: string
-                phone:
-                  type: string
-                  description: Max 8 chars, do not include +47, etc.
-                category_id:
-                  type: integer
-                  format: int32
-                assigned_member_ids:
-                  type: string
-                  format: JSON
-                  description: JSON encoded with member IDs, e.g., ["20004", "20008"]
-                vehicle_ids:
-                  type: string
-                  format: JSON
-                  description: JSON encoded with vehicle IDs, e.g., ["10004", "10008"]
-                priority:
-                  type: string
-                  enum:
-                    - LOW
-                    - MEDIUM
-                    - HIGH
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                    format: int32
-                    description: Lead ID
-  /leads/incoming/{ID}:
-    post:
-      tags:
-        - Leads
-      summary: Insert lead correspondance
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Lead ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required:
-                - message_id
-                - source
-                - body
-              properties:
-                message_id:
-                  type: string
-                  description: Unique identifier per message, can for example me email/SMS UUID
-                source:
-                  type: string
-                  description: The main source of the lead
-                  enum:
-                    - EMAIL
-                    - SMS_IN
-                    - FACEBOOK
-                    - NOTE
-                subject:
-                  type: string
-                  description: Primarily used for emails
-                body:
-                  type: string
-                  format: html
-                  description: HTML content
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                    format: int32
-                    description: Correspondance ID
-  /leads/sendMessage/{ID}:
-    post:
-      tags:
-        - Leads
-      summary: Send email/SMS
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Lead ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required:
-                - type
-                - content
-              properties:
-                type:
-                  type: string
-                  description: PORTAL_EMAIL, PORTAL_SMS, PORTAL_NOTE
-                  enum:
-                    - PORTAL_EMAIL
-                    - PORTAL_SMS
-                    - PORTAL_NOTE
-                content:
-                  type: string
-                  format: html
-                  description: HTML content
-      responses:
-        '200':
-          description: Data
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                    format: int32
-                    description: Correspondance ID
-
-  /documents/get/{table}/{tableID}:
-    get:
-      tags:
-        - Documents
-      summary: Get uploaded documents
-      description: Returns all uploaded documents linked to a table and table ID
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: table
-          in: path
-          required: true
-          description: Reference table
-          schema:
-            type: string
-            enum:
-              - leads
-              - vehicles
-              - contracts
-              - leads_email_files
-        - name: tableID
-          in: path
-          required: true
-          description: Reference table ID
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Documents list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                    company_id:
-                      type: integer
-                    reference_table:
-                      type: string
-                    reference_id:
-                      type: integer
-                    relation_table:
-                      type: string
-                      nullable: true
-                    relation_id:
-                      type: integer
-                    url:
-                      type: string
-                      format: uri
-                    description:
-                      type: string
-                      nullable: true
-                    password:
-                      type: string
-                      nullable: true
-                    position:
-                      type: integer
-                    creation_date:
-                      type: integer
-                      format: int64
-                    creation_member_id:
-                      type: integer
-                    creation_ip_address:
-                      type: string
-        '404':
-          description: No documents found
-
-  /documents/upload/{table}/{tableID}:
-    post:
-      tags:
-        - Documents
-      summary: Upload documents
-      description: Upload one or more documents (PDF or images) to a table reference
-      security:
-        - TokenHeader: []
-      parameters:
-        - name: table
-          in: path
-          required: true
-          description: Reference table
-          schema:
-            type: string
-            enum:
-              - leads
-              - vehicles
-              - contracts
-              - leads_email_files
-        - name: tableID
-          in: path
-          required: true
-          description: Reference table ID
-          schema:
-            type: integer
-      requestBody:
-        required: true
         content:
           multipart/form-data:
             schema:
               type: object
-              required:
-                - multiple_files
               properties:
-                multiple_files:
-                  type: array
-                  items:
-                    type: string
-                    format: binary
-                  description: Multiple files (PDF or images)
+                file:
+                  type: string
+                  format: binary
+                youtube_id:
+                  type: string
+                  description: YouTube video ID (for VIDEO type)
       responses:
-        '200':
-          description: Upload successful
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /ad/deleteUpload/{id}:
+    delete:
+      tags: [Ads]
+      summary: Delete media from ad
+      description: |
+        Delete one or more media items (images, videos, documents) from an ad.
+      operationId: adDeleteUpload
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Ad ID
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [IMAGE, VIDEO, DOCUMENT]
+        - name: media_ids
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: integer
+          description: Array of media IDs to delete
+      responses:
+        "200":
+          description: OK
           content:
             application/json:
               schema:
@@ -1258,33 +384,158 @@ paths:
                   response:
                     type: string
                     example: success
-                  message:
-                    type: string
-                    example: Opplastning fullført.
-                  urls:
-                    type: array
-                    items:
-                      type: string
-                      format: uri
-                  ids:
-                    type: array
-                    items:
-                      type: integer
-                  data:
+                  results:
+                    type: object
+                    additionalProperties:
+                      type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  VEHICLES
+  # ═══════════════════════════════════════════════════════════════════════
+
+  /vehicle/get/{identifier}:
+    get:
+      tags: [Vehicles]
+      summary: Lookup vehicle
+      description: |
+        Look up vehicle data from Norwegian public registries (Statens vegvesen + Brønnøysund).
+        Returns technical specifications, registration data, and any registered liens.
+
+        **Note:** Each call costs 0.5 NOK and is tracked in API usage.
+      operationId: vehicleGet
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+          description: License plate (e.g. `AB12345`) or VIN (17+ characters)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vehicle:
+                    type: object
+                    description: Vehicle data from Vegvesen
+                  brreg_liens:
                     type: array
                     items:
                       type: object
-        '400':
-          description: Invalid upload
-        '401':
-          description: Unauthorized
+                    description: Registered liens from Brønnøysund
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /vehicle/add:
+    post:
+      tags: [Vehicles]
+      summary: Add vehicle to inventory
+      description: Creates a new vehicle record and ad listing from registration data.
+      operationId: vehicleAdd
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                identifier:
+                  type: string
+                  description: License plate or VIN
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /vehicle/oemEquipment/{identifier}:
+    get:
+      tags: [Vehicles]
+      summary: Get OEM equipment list
+      description: Returns factory equipment list for a vehicle by license plate or VIN.
+      operationId: vehicleOemEquipment
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+          description: License plate or VIN
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /vehicle/serviceHistory/{identifier}:
+    get:
+      tags: [Vehicles]
+      summary: Get service history
+      description: Returns the EU/PKK inspection and service history for a vehicle.
+      operationId: vehicleServiceHistory
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+          description: License plate or VIN
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /vehicle/owners/{identifier}:
+    get:
+      tags: [Vehicles]
+      summary: Get ownership history
+      description: Returns the registered ownership history for a vehicle.
+      operationId: vehicleOwners
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+          description: License plate
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  DEALS
+  # ═══════════════════════════════════════════════════════════════════════
 
   /deals/list:
     get:
-      tags: [Offers]
+      tags: [Deals]
       summary: List offers
-      description: |
-        Returns a paginated list of offers with optional filters. Each offer includes its customer, vehicles, and status counts.
+      description: Returns a paginated list of offers with filters. Includes customer and vehicle summaries.
+      operationId: dealsList
       parameters:
         - name: page
           in: query
@@ -1292,7 +543,6 @@ paths:
             type: integer
             default: 1
             minimum: 1
-          description: Page number
         - name: perPage
           in: query
           schema:
@@ -1300,69 +550,58 @@ paths:
             default: 25
             minimum: 1
             maximum: 100
-          description: Results per page
         - name: status
           in: query
           schema:
             type: string
             default: all
             enum: [all, draft, sent, accepted, declined, expired, converted]
-          description: Filter by offer status
         - name: type
           in: query
           schema:
             type: string
             example: salg,innkjop
-          description: Comma-separated offer types to filter by (`innkjop`, `kommisjon`, `formidling`, `salg`)
+          description: Comma-separated offer types
         - name: sortBy
           in: query
           schema:
             type: string
             default: newest
             enum: [newest, oldest, price_desc, price_asc, customer_asc]
-          description: Sort order
         - name: search
           in: query
           schema:
             type: string
-          description: Search by offer number, customer name, or vehicle
+          description: Search by offer number, customer, or vehicle
         - name: customer
           in: query
           schema:
             type: string
-          description: Search by customer name
         - name: vehicle
           in: query
           schema:
             type: string
-          description: Search by vehicle make, model, or registration number
         - name: priceFrom
           in: query
           schema:
             type: number
-          description: Minimum total price
         - name: priceTo
           in: query
           schema:
             type: number
-          description: Maximum total price
         - name: dateFrom
           in: query
           schema:
             type: string
             format: date
-            example: "2025-01-01"
-          description: Created from date (YYYY-MM-DD)
         - name: dateTo
           in: query
           schema:
             type: string
             format: date
-            example: "2025-12-31"
-          description: Created to date (YYYY-MM-DD)
       responses:
         "200":
-          description: Paginated list of offers
+          description: OK
           content:
             application/json:
               schema:
@@ -1374,23 +613,17 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: "#/components/schemas/OfferSummary"
+                      $ref: "#/components/schemas/DealOfferSummary"
                   page:
                     type: integer
-                    example: 1
                   perPage:
                     type: integer
-                    example: 25
                   pages:
                     type: integer
-                    example: 4
-                    description: Total number of pages
                   total:
                     type: integer
-                    example: 87
-                    description: Total number of offers matching filters
                   statusCounts:
-                    $ref: "#/components/schemas/StatusCounts"
+                    $ref: "#/components/schemas/DealStatusCounts"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1400,19 +633,15 @@ paths:
 
   /deals/get/{id}:
     get:
-      tags: [Offers]
+      tags: [Deals]
       summary: Get offer
-      description: Returns a single offer with full details including vehicles, financing, line items, trade-ins, events, signatures, and attachments.
+      description: Full offer details including vehicles with financing, line items, trade-ins, events, signatures, and attachments.
+      operationId: dealsGet
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Offer ID
+        - $ref: "#/components/parameters/DealId"
       responses:
         "200":
-          description: Full offer details
+          description: OK
           content:
             application/json:
               schema:
@@ -1422,35 +651,29 @@ paths:
                     type: string
                     example: success
                   data:
-                    $ref: "#/components/schemas/OfferDetail"
+                    $ref: "#/components/schemas/DealOfferDetail"
         "404":
-          description: Offer not found
+          description: Not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example:
-                response: error
-                message: Tilbud ikke funnet
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
 
   /deals/add:
     post:
-      tags: [Offers]
+      tags: [Deals]
       summary: Create offer
       description: |
-        Creates a new deal offer. The `offer_type` field is required. Vehicles, line items, and trade-ins can be included in the same request.
-
-        A unique `offer_number` and `portal_token` are generated automatically.
+        Creates a new deal offer. `offer_type` is required. A unique `offer_number` and `portal_token` are auto-generated.
+      operationId: dealsAdd
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OfferCreate"
+              $ref: "#/components/schemas/DealOfferCreate"
             example:
               offer_type: salg
               customer_id: 1234
@@ -1467,10 +690,7 @@ paths:
                   year: 2023
                   registration_number: AB12345
                   vehicle_price: 420000
-                  discount_amount: 10000
-                  is_new: 0
                   mileage: 35000
-                  fuel_type: Hybrid
                   include_financing: 1
                   financing_type: annuity
                   down_payment: 100000
@@ -1480,11 +700,9 @@ paths:
                   monthly_payment: 6195
               line_items:
                 - name: Lakk-beskyttelse
-                  description: Keramisk lakk-beskyttelse
                   quantity: 1
                   unit_price: 15000
                   total_price: 15000
-                  vat_rate: 25
               trade_ins:
                 - make: Volkswagen
                   model: Golf
@@ -1492,11 +710,10 @@ paths:
                   registration_number: CD67890
                   mileage: 95000
                   estimated_value: 120000
-                  vehicle_price: 115000
                   condition: good
       responses:
         "201":
-          description: Offer created
+          description: Created
           content:
             application/json:
               schema:
@@ -1511,59 +728,35 @@ paths:
                       id:
                         type: integer
                         example: 42
-                        description: The new offer ID
                       portal_token:
                         type: string
-                        example: a1b2c3d4e5f6...
-                        description: Token for customer portal access
         "400":
           description: Validation error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example:
-                response: error
-                message: "Missing or invalid offer_type. Allowed: innkjop, kommisjon, formidling, salg"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
 
   /deals/update/{id}:
     put:
-      tags: [Offers]
+      tags: [Deals]
       summary: Update offer
       description: |
-        Updates an existing offer. Only the fields provided will be updated.
-
-        **Note:** `vehicles`, `line_items`, and `trade_ins` arrays are replaced entirely — not merged. Include all items you want to keep.
+        Updates an existing offer. `vehicles`, `line_items`, and `trade_ins` arrays are replaced entirely — include all items you want to keep.
+      operationId: dealsUpdate
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Offer ID
+        - $ref: "#/components/parameters/DealId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OfferUpdate"
-            example:
-              total_price: 440000
-              notes: "Oppdatert pris etter forhandling."
-              vehicles:
-                - vehicle_id: 5678
-                  make: Toyota
-                  model: RAV4
-                  year: 2023
-                  vehicle_price: 410000
-                  discount_amount: 10000
+              $ref: "#/components/schemas/DealOfferUpdate"
       responses:
         "200":
-          description: Offer updated
+          description: Updated
           content:
             application/json:
               schema:
@@ -1577,38 +770,26 @@ paths:
                     properties:
                       id:
                         type: integer
-                        example: 42
                       portal_token:
                         type: string
         "404":
-          description: Offer not found
+          description: Not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
 
   /deals/updateStatus/{id}:
     post:
-      tags: [Offers]
+      tags: [Deals]
       summary: Update offer status
       description: |
-        Updates the status of an offer. Timestamps are set automatically:
-        - Setting `sent` → sets `sent_at`
-        - Setting `accepted` → sets `accepted_at`
-        - Setting `declined` → sets `declined_at`
-
-        When declining, include a `decline_reason`.
+        Updates offer status. Timestamps auto-set: `sent` → `sent_at`, `accepted` → `accepted_at`, `declined` → `declined_at`.
+      operationId: dealsUpdateStatus
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Offer ID
+        - $ref: "#/components/parameters/DealId"
       requestBody:
         required: true
         content:
@@ -1620,27 +801,26 @@ paths:
                 status:
                   type: string
                   enum: [draft, sent, accepted, declined]
-                  description: The new status
                 decline_reason:
                   type: string
-                  description: Reason for declining (required when status is `declined`)
+                  description: Required when status is `declined`
             examples:
               send:
-                summary: Send offer to customer
+                summary: Send to customer
                 value:
                   status: sent
               accept:
-                summary: Mark as accepted
+                summary: Mark accepted
                 value:
                   status: accepted
               decline:
-                summary: Mark as declined
+                summary: Mark declined
                 value:
                   status: declined
                   decline_reason: "Kunden fant bedre pris hos konkurrent"
       responses:
         "200":
-          description: Status updated
+          description: OK
           content:
             application/json:
               schema:
@@ -1651,39 +831,26 @@ paths:
                     example: success
                   message:
                     type: string
-                    example: Status oppdatert
         "400":
           description: Invalid status
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example:
-                response: error
-                message: "Missing or invalid status. Allowed: draft, sent, accepted, declined"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
 
   /deals/delete/{id}:
     delete:
-      tags: [Offers]
+      tags: [Deals]
       summary: Delete offer
-      description: |
-        Permanently deletes an offer and all related data (vehicles, line items, trade-ins, events, signatures).
-
-        Only offers with status `draft` or `sent` can be deleted.
+      description: Permanently deletes an offer. Only `draft` or `sent` offers can be deleted.
+      operationId: dealsDelete
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Offer ID
+        - $ref: "#/components/parameters/DealId"
       responses:
         "200":
-          description: Offer deleted
+          description: Deleted
           content:
             application/json:
               schema:
@@ -1694,1197 +861,501 @@ paths:
                     example: success
                   message:
                     type: string
-                    example: Tilbud slettet
         "400":
-          description: Cannot delete (offer is accepted, declined, or converted)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Offer not found
+          description: Cannot delete
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  CONTRACTS
+  # ═══════════════════════════════════════════════════════════════════════
+
+  /contract/list:
+    get:
+      tags: [Contracts]
+      summary: List contracts
+      description: Paginated list of contracts with filters. Includes vehicle summary, owners, and signature status.
+      operationId: contractList
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            default: 25
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            default: alle
+            enum: [alle, utkast, venter_signering, fullfort]
+          description: |
+            `alle` = all, `utkast` = draft, `venter_signering` = awaiting signatures, `fullfort` = completed
+        - name: type
+          in: query
+          schema:
+            type: string
+            default: alle
+            enum: [alle, salg, innkjop, formidling, kommisjon]
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            default: newest
+            enum: [newest, oldest, customer_asc, customer_desc, vehicle_asc, vehicle_desc]
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by customer, vehicle, or contract ID
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    example: SUCCESS
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ContractSummary"
+                  page:
+                    type: integer
+                  perPage:
+                    type: integer
+                  pages:
+                    type: integer
+                  total:
+                    type: integer
+                  statusCounts:
+                    $ref: "#/components/schemas/ContractStatusCounts"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
 
-  /company/get:
+  /contract/get/{id}:
     get:
-      tags:
-        - Company
-      summary: Get company data
-      description: Returns a company data
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Company data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Company'
-
-  /data/makes:
-    get:
-      tags:
-        - Metadata
-      summary: Get makes
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Makes data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    vehicle_type:
-                      type: string
-                      description: Mappings from getVehicleTypes endpoint
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/makes/{ID}:
-    get:
-      tags:
-        - Metadata
-      description: Get a make
+      tags: [Contracts]
+      summary: Get contract
+      description: Full contract details including vehicle, owners with signature status, pricing, payment, trade-in, insurance, and warranty data.
+      operationId: contractGet
       parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
+        - $ref: "#/components/parameters/ContractId"
       responses:
-        '200':
-          description: Gets make
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    vehicle_type:
-                      type: string
-                      description: Mappings from getVehicleTypes endpoint
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/makeModels:
-    get:
-      tags:
-        - Metadata
-      summary: Get models
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Models data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/makeModels/{MAKE_ID}:
-    get:
-      tags:
-        - Metadata
-      description: Gets models by make
-      parameters:
-        - name: MAKE_ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Gets models
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/makeModels/{MAKE_ID}/{ID}:
-    get:
-      tags:
-        - Metadata
-      description: Gets model
-      parameters:
-        - name: MAKE_ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Gets model
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/vehicleTypes:
-    get:
-      tags:
-        - Metadata
-      summary: Get vehicle types
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Vehicle types data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    value:
-                      type: string
-
-  /data/fuels:
-    get:
-      tags:
-        - Metadata
-      summary: Get fuel types
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Fuel types data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/fuels/{ID}:
-    get:
-      tags:
-        - Metadata
-      description: Gets fuel type
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Gets fuel type
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/colors:
-    get:
-      tags:
-        - Metadata
-      summary: Get colors
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Colors data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/colors/{ID}:
-    get:
-      tags:
-        - Metadata
-      description: Gets color
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Gets color
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/bodyTypes:
-    get:
-      tags:
-        - Metadata
-      summary: Get body types
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Body types data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/bodyTypes/{ID}:
-    get:
-      tags:
-        - Metadata
-      description: Gets body type
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Gets body type
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/taxClasses:
-    get:
-      tags:
-        - Metadata
-      summary: Get tax classes
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Tax classes data
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-  /data/taxClasses/{ID}:
-    get:
-      tags:
-        - Metadata
-      description: Gets tax class
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Gets tax class
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      format: int32
-                    value:
-                      type: string
-                    display:
-                      type: string
-
-
-  /insurance/get:
-    get:
-      tags:
-        - Insurance
-      description: Returns list of insurances
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: A list of insurances
-
-  /insurance/get/{ID}:
-    get:
-      tags:
-        - Insurance
-      description: Returns an insurance
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Gets insurance
-
-  /contracts/insurance/calculate:
-    post:
-      tags:
-        - Insurance
-      description: Calculates rates of insurance from insurance company
-      security:
-        - TokenHeader: []
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                vehicle:
-                  type: object
-                  properties:
-                    license_number:
-                      type: string
-                    year:
-                      type: integer
-                      format: int32
-                  required:
-                    - license_number
-                    - year
-
-                owner:
-                  type: object
-                  properties:
-                    pid:
-                      type: integer
-                      format: int32
-                    first_name:
-                      type: string
-                    last_name:
-                      type: string
-                  required:
-                    - pid
-                    - first_name
-                    - last_name
-
-                insurance_company_id:
-                  type: integer
-                  format: int32
-                  description: Insurance company ID
-                coverage:
-                  type: string
-                  enum:
-                    - SUPER
-                    - FULL
-                    - PARTIAL
-                    - STANDARD
-                  description: The type of insurance
-                mileage:
-                  type: number
-                  format: int32
-                  description: Max mileage of insurance
-                bonus:
-                  type: number
-                  format: int32
-                  description: Estimated contact bonus
-              required:
-                - vehicle
-                - owner
-                - insurance_company_id
-                - coverage
-                - mileage
-                - bonus
-      responses:
-        '200':
-          description: Pricelist
+        "200":
+          description: OK
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  price_per_month:
-                    type: integer
-                    format: int32
+                  response:
+                    type: string
+                    example: SUCCESS
+                  data:
+                    $ref: "#/components/schemas/ContractDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
-  /contracts/insurance/order:
+  /contract/add:
     post:
-      tags:
-        - Insurance
-      description: Orders insurance from insurance company
-      security:
-        - TokenHeader: []
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                vehicle:
-                  type: object
-                  properties:
-                    license_number:
-                      type: string
-                    year:
-                      type: integer
-                      format: int32
-                  required:
-                    - license_number
-                    - year
-
-                owner:
-                  type: object
-                  properties:
-                    pid:
-                      type: integer
-                      format: int32
-                    first_name:
-                      type: string
-                    last_name:
-                      type: string
-                  required:
-                    - pid
-                    - first_name
-                    - last_name
-
-                insurance_company_id:
-                  type: integer
-                  format: int32
-                  description: Insurance company ID
-                coverage:
-                  type: string
-                  enum:
-                    - SUPER
-                    - FULL
-                    - PARTIAL
-                    - STANDARD
-                  description: The type of insurance
-                start_date:
-                  type: number
-                  format: int64
-                  description: Start date in unix timestamp
-                mileage:
-                  type: number
-                  format: int32
-                  description: Max mileage of insurance
-                bonus:
-                  type: number
-                  format: int32
-                  description: Estimated contact bonus
-              required:
-                - vehicle
-                - owner
-                - insurance_company_id
-                - coverage
-                - start_date
-                - mileage
-                - bonus
-      responses:
-        '200':
-          description: Insurance created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  insurance_id:
-                    type: integer
-                    format: int32
-
-  /warranty/get:
-    get:
-      tags:
-        - Warranty
-      description: Returns list of warranties
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: A list of warranties
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Warranties'
-
-
-  /warranty/get/{ID}:
-    get:
-      tags:
-        - Warranty
-      description: Returns a warranty
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Gets warranty
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Warranties'
-
-  /contracts/warranty/calculate:
-    post:
-      tags:
-        - Warranty
-      description: Calculates rates of warranty from warranty company
-      security:
-        - TokenHeader: []
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                vehicle:
-                  type: object
-                  properties:
-                    license_number:
-                      type: string
-                    year:
-                      type: integer
-                      format: int32
-                    mileage:
-                      type: integer
-                      format: int32
-                  required:
-                    - license_number
-                    - year
-                    - mileage
-
-                warranty_company_id:
-                  type: integer
-                  format: int32
-                  description: Warranty company ID
-              required:
-                - vehicle
-                - warranty_company_id
-      responses:
-        '200':
-          description: Warranties
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Warranties'
-
-  /contracts/warranty/order:
-    post:
-      tags:
-        - Warranty
-      description: Orders insurance from insurance company
-      security:
-        - TokenHeader: []
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                vehicle:
-                  type: object
-                  properties:
-                    license_number:
-                      type: string
-                    year:
-                      type: integer
-                      format: int32
-                    mileage:
-                      type: integer
-                      format: int32
-                  required:
-                    - license_number
-                    - year
-                    - mileage
-
-                owner:
-                  type: object
-                  properties:
-                    pid:
-                      type: integer
-                      format: int32
-                    first_name:
-                      type: string
-                    last_name:
-                      type: string
-                  required:
-                    - pid
-                    - first_name
-                    - last_name
-
-                warranty_company_id:
-                  type: integer
-                  format: int32
-                  description: Warranty company ID
-                start_date:
-                  type: number
-                  format: int64
-                  description: Start date in unix timestamp
-              required:
-                - vehicle
-                - owner
-                - warranty_company_id
-                - start_date
-      responses:
-        '200':
-          description: Created warranty
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  warranty_id:
-                    type: integer
-                    format: int32
-
-  /finance/get:
-    get:
-      tags:
-        - Finance
-      description: Returns list of finance options
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: A list of finance options
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Warranties'
-
-
-  /finance/get/{ID}:
-    get:
-      tags:
-        - Finance
-      description: Returns a finance
-      parameters:
-        - name: ID
-          in: path
-          required: true
-          description: Unique ID
-          schema:
-            type: integer
-      security:
-        - TokenHeader: []
-      responses:
-        '200':
-          description: Gets finance
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Warranties'
-
-  /contracts/finance/calculate:
-    post:
-      tags:
-        - Finance
-      description: Calculates rates of finance from finance company
-      security:
-        - TokenHeader: []
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                vehicle:
-                  type: object
-                  properties:
-                    license_number:
-                      type: string
-                    year:
-                      type: integer
-                      format: int32
-                    mileage:
-                      type: integer
-                      format: int32
-                  required:
-                    - license_number
-                    - year
-                    - mileage
-
-                owners:
-                  type: object
-                  properties:
-                    type:
-                      type: string
-                      enum:
-                        - OWNER
-                        - CO_OWNER
-                    entity_type:
-                      type: string
-                      enum:
-                        - PERSON
-                        - COMPANY
-                    pid:
-                      type: integer
-                      format: int32
-                    first_name:
-                      type: string
-                    last_name:
-                      type: string
-                    email:
-                      type: string
-                    phone_number:
-                      type: integer
-                      format: int32
-                  required:
-                    - type
-                    - entity_type
-                    - pid
-                    - first_name
-                    - last_name
-                    - email
-                    - phone_number
-
-                finance_company_id:
-                  type: integer
-                  format: int32
-                  description: Finance company ID
-              required:
-                - vehicle
-                - owners
-                - finance_company_id
-      responses:
-        '200':
-          description: Finances
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Warranties'
-
-  /contracts/finance/order:
-    post:
-      tags:
-        - Finance
-      description: Orders finance from finance company
-      security:
-        - TokenHeader: []
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                vehicle:
-                  type: object
-                  properties:
-                    license_number:
-                      type: string
-                    year:
-                      type: integer
-                      format: int32
-                    mileage:
-                      type: integer
-                      format: int32
-                  required:
-                    - license_number
-                    - year
-                    - mileage
-
-                owner:
-                  type: object
-                  properties:
-                    pid:
-                      type: integer
-                      format: int32
-                    first_name:
-                      type: string
-                    last_name:
-                      type: string
-                  required:
-                    - pid
-                    - first_name
-                    - last_name
-
-                finance_company_id:
-                  type: integer
-                  format: int32
-                  description: Finance company ID
-                start_date:
-                  type: number
-                  format: int64
-                  description: Start date in unix timestamp
-              required:
-                - vehicle
-                - owner
-                - finance_company_id
-                - start_date
-      responses:
-        '200':
-          description: Created finance
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  warranty_id:
-                    type: integer
-                    format: int32
-
-  /autoforecast/predict:
-    post:
-      tags:
-        - AutoPrognose®
-      summary: Predicts the price of a car and its estimated time to sell
+      tags: [Contracts]
+      summary: Create contract
       description: |
-        This endpoint uses machine learning models to predict the price of a car and how long it will take to sell. Users can select from different model versions, provide vehicle details, and specify additional checks for more accurate predictions.
-      security:
-        - TokenHeader: []
+        Creates a contract using the simplified flow — details, settlement, and owner in a single call.
+
+        Set `contract_type` to `BUY` for incoming (purchase) contracts or `SELL` for outgoing (sale) contracts.
+      operationId: contractAdd
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                model:
-                  type: string
-                  description: |
-                    The machine learning model to use for prediction.
-                    Options: "2021.5" (deprecated), "2022.4", "2023.9", "2024.11".
-                  enum:
-                    - 2021.5
-                    - 2022.4
-                    - 2023.9
-                    - 2024.11
-                  example: "2024.11"
-                scope:
-                  type: string
-                  description: |
-                    Define whether the prediction is for retail, auction, or wholesale markets.
-                  enum:
-                    - RETAIL
-                    - AUCTION
-                    - WHOLESALE
-                  example: "RETAIL"
-                date:
-                  type: object
-                  description: Optional date for historical predictions. Can go back to May 2021.
-                  properties:
-                    month:
-                      type: integer
-                      format: int32
-                      minimum: 1
-                      maximum: 12
-                      example: 10
-                    year:
-                      type: integer
-                      format: int32
-                      minimum: 2021
-                      example: 2023
-                  required:
-                    - month
-                    - year
-                vehicle:
-                  type: object
-                  description: Object containing key vehicle information.
-                  properties:
-                    license_number:
-                      type: string
-                      description: License plate number of the vehicle. Required if `vin` is not provided.
-                      example: "AB12345"
-                    vin:
-                      type: string
-                      description: VIN (Vehicle Identification Number) of the vehicle. Required if `license_number` is not provided.
-                      example: "1HGCM82633A123456"
-                    mileage:
-                      type: integer
-                      format: int32
-                      example: 75000
-                    condition:
-                      type: string
-                      description: |
-                        General condition of the vehicle.
-                      enum:
-                        - EXCELLENT
-                        - GOOD
-                        - FAIR
-                        - POOR
-                      example: "GOOD"
-                  required:
-                    - vin
-                    - mileage
-                checks:
-                  type: object
-                  description: Additional checks for prediction accuracy.
-                  properties:
-                    service_history:
-                      type: boolean
-                      description: Whether service history is available.
-                      example: true
-                    equipment_data:
-                      type: boolean
-                      description: Whether equipment data is available.
-                      example: true
-                    insurance_claims:
-                      type: boolean
-                      description: Whether insurance claims are available.
-                      example: false
-                    include_market_trends:
-                      type: boolean
-                      description: Include market trend analysis in the prediction.
-                      example: false
-              required:
-                - model
-                - vin
-                - mileage
+              $ref: "#/components/schemas/ContractCreate"
+            examples:
+              buy:
+                summary: Buy contract (incoming purchase)
+                value:
+                  contract_type: BUY
+                  vehicle_id: 5678
+                  ads_id: 1234
+                  price: 250000
+                  delivery_date: "2025-07-01"
+                  mileage: 50000
+                  contract_art_type: PURCHASE
+                  customer_account_number: "12345678901"
+                  owner_type: PERSON
+                  owner_first_name: Ola
+                  owner_last_name: Nordmann
+                  owner_email: ola@example.com
+                  owner_phone: "91234567"
+              sell:
+                summary: Sell contract (outgoing sale)
+                value:
+                  contract_type: SELL
+                  vehicle_id: 5678
+                  ads_id: 1234
+                  price: 350000
+                  delivery_date: "2025-07-15"
+                  mileage: 65000
+                  omreg_price: 3200
+                  account_number: "98765432101"
+                  owner_type: PERSON
+                  owner_first_name: Kari
+                  owner_last_name: Hansen
+                  owner_email: kari@example.com
+                  owner_phone: "98765432"
       responses:
-        '200':
-          description: Prediction results
+        "201":
+          description: Created
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  price:
-                    type: number
-                    description: Predicted price of the vehicle.
-                    example: 15000.75
-                  time_to_sell:
+                  response:
+                    type: string
+                    example: SUCCESS
+                  message:
+                    type: string
+                  contract_id:
                     type: integer
-                    format: int32
-                    description: Estimated time to sell the vehicle in days
-                    example: 10
-                  market_demand_score:
-                    type: integer
-                    format: int32
-                    description: Market demand score (1-10) for the vehicle.
-                    example: 7
-                  price_range:
-                    type: object
-                    description: Predicted price range for the vehicle.
-                    properties:
-                      min:
-                        type: number
-                        example: 14500
-                      max:
-                        type: number
-                        example: 15500
-                  historical_price_trend:
+                    example: 123
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /contract/update/{id}:
+    put:
+      tags: [Contracts]
+      summary: Update contract
+      description: |
+        Updates fields on a DRAFT contract. Pass one or more fields to update. Only allowed fields are accepted; unknown fields are ignored.
+      operationId: contractUpdate
+      parameters:
+        - $ref: "#/components/parameters/ContractId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractUpdate"
+            example:
+              price: 260000
+              mileage: 51000
+              comments: "Oppdatert pris etter vurdering"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    example: SUCCESS
+                  message:
+                    type: string
+                    example: Kontrakt oppdatert
+                  updated_fields:
                     type: array
-                    description: Historical price trend for the vehicle model.
-                    items:
-                      type: object
-                      properties:
-                        date:
-                          type: string
-                          example: "2023-01"
-                        average_price:
-                          type: number
-                          example: 16000
-                  valuation_details:
-                    type: object
-                    description: Breakdown of factors affecting the predicted price.
-                    properties:
-                      base_price:
-                        type: number
-                        example: 14000
-                      adjustments:
-                        type: object
-                        properties:
-                          mileage:
-                            type: number
-                            example: -500
-                          condition:
-                            type: number
-                            example: 1000
-                          market_trends:
-                            type: number
-                            example: 500
-                  comparable_listings:
-                    type: array
-                    description: List of similar vehicles in the market.
-                    items:
-                      type: object
-                      properties:
-                        price:
-                          type: number
-                          example: 15000
-                        location:
-                          type: string
-                          example: "Oslo"
-                        mileage:
-                          type: integer
-                          example: 55000
-                        date_listed:
-                          type: string
-                          format: date
-                          example: "2023-11-10"
-                  alerts:
-                    type: array
-                    description: List of alerts or warnings related to the prediction.
                     items:
                       type: string
-                      example: "High mileage detected. This may lower the resale value."
-        '401':
-          description: Unauthorized. Token is missing or invalid.
-        '500':
-          description: Internal server error
+                    example: [price, mileage, comments]
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                    description: Any fields that failed to update
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
-  /autoforecast/models:
-    get:
-      tags:
-        - AutoPrognose®
-      summary: Get available machine learning models
-      description: Returns a list of available machine learning models with their details.
-      security:
-        - TokenHeader: []
+  /contract/sign/{id}:
+    post:
+      tags: [Contracts]
+      summary: Complete contract
+      description: |
+        Marks a DRAFT contract as completed without going through the digital signing flow (BankID/E-Sign).
+
+        Use this when signatures are handled outside of AutoNet. The contract must be in `DRAFT` status.
+
+        > **Note:** Digital signing via BankID is only available through the AutoNet portal UI and cannot be initiated via the API.
+      operationId: contractSign
+      parameters:
+        - $ref: "#/components/parameters/ContractId"
       responses:
-        '200':
-          description: List of machine learning models
+        "200":
+          description: Contract completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    example: SUCCESS
+                  message:
+                    type: string
+        "400":
+          description: Contract is not in DRAFT status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                response: error
+                message: Kontrakten er ikke i utkast.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /contract/delete/{id}:
+    delete:
+      tags: [Contracts]
+      summary: Delete contract
+      description: Deletes a contract. Only `DRAFT` contracts without active signature requests can be deleted.
+      operationId: contractDelete
+      parameters:
+        - $ref: "#/components/parameters/ContractId"
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    example: SUCCESS
+                  message:
+                    type: string
+        "400":
+          description: Cannot delete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /contract/invoicePdf/{id}:
+    get:
+      tags: [Contracts]
+      summary: Download contract invoice PDF
+      description: |
+        Returns the contract invoice as a PDF document.
+
+        If the contract has an invoice registered in the accounting system, the accounting PDF is returned.
+        Otherwise a generated invoice PDF is returned based on the contract data and order lines.
+      operationId: contractInvoicePdf
+      parameters:
+        - $ref: "#/components/parameters/ContractId"
+        - name: currency
+          in: query
+          schema:
+            type: string
+            default: NOK
+        - name: currency_value
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: PDF document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Contract not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /contract/pdf/{id}:
+    get:
+      tags: [Contracts]
+      summary: Download contract document PDF
+      description: |
+        Returns the full contract document as a PDF with professional headers, footers, and company branding.
+
+        For completed contracts with digital signatures (BankID), the signed PDF is returned when available.
+        Otherwise a generated contract PDF is returned with all contract details, terms, declarations, and attached documents.
+      operationId: contractPdf
+      parameters:
+        - $ref: "#/components/parameters/ContractId"
+      responses:
+        "200":
+          description: PDF document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Contract not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  LEADS
+  # ═══════════════════════════════════════════════════════════════════════
+
+  /leads/get:
+    get:
+      tags: [Leads]
+      summary: List leads
+      description: |
+        Returns leads with pagination and filters. Supports search, status filtering, sorting, and date ranges via query parameters.
+      operationId: leadsList
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: rows_limit
+          in: query
+          schema:
+            type: integer
+            default: 25
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /leads/get/{id}:
+    get:
+      tags: [Leads]
+      summary: Get lead
+      description: Returns full lead details by ID.
+      operationId: leadsGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /leads/getCorrespondence/{id}:
+    get:
+      tags: [Leads]
+      summary: Get lead correspondence
+      description: Returns all messages and correspondence for a lead.
+      operationId: leadsGetCorrespondence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Lead ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /leads/categories:
+    get:
+      tags: [Leads]
+      summary: List lead categories
+      description: Returns all lead/mailbox categories for the company.
+      operationId: leadsCategories
+      responses:
+        "200":
+          description: OK
           content:
             application/json:
               schema:
@@ -2892,36 +1363,688 @@ paths:
                 items:
                   type: object
                   properties:
-                    version:
+                    id:
+                      type: integer
+                    name:
                       type: string
-                      description: Version of the machine learning model.
-                      example: "2024.11"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /leads/categories/{id}:
+    get:
+      tags: [Leads]
+      summary: Get lead category
+      description: Returns a single lead category by ID.
+      operationId: leadsCategoryGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /leads/add:
+    post:
+      tags: [Leads]
+      summary: Create lead
+      description: |
+        Creates a new lead. `source` and `name` are required.
+      operationId: leadsAdd
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [source, name]
+              properties:
+                source:
+                  type: string
+                  description: "**Required.** Lead source (e.g. website name, campaign)"
+                name:
+                  type: string
+                  description: "**Required.** Customer name"
+                email:
+                  type: string
+                phone:
+                  type: string
+                category_id:
+                  type: integer
+                  description: Lead category ID
+                assigned_member_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: Member IDs to assign
+                priority:
+                  type: string
+                  enum: [LOW, MEDIUM, HIGH]
+                  default: LOW
+                vehicle_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: Vehicle IDs the lead is interested in
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    example: success
+                  leadId:
+                    type: integer
+        "400":
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /leads/incoming/{id}:
+    post:
+      tags: [Leads]
+      summary: Add incoming message
+      description: |
+        Adds an incoming message/correspondence to an existing lead. Useful for integrating external communication channels.
+      operationId: leadsIncoming
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Lead ID
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [source, message_id, body]
+              properties:
+                source:
+                  type: string
+                  description: "**Required.** Message source"
+                subject:
+                  type: string
+                body:
+                  type: string
+                  description: "**Required.** Message body"
+                message_id:
+                  type: string
+                  description: "**Required.** Unique message identifier (for deduplication)"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /leads/sendMessage/{id}:
+    post:
+      tags: [Leads]
+      summary: Send message to lead
+      description: Sends a reply/message to a lead. Supports file attachments.
+      operationId: leadsSendMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Lead ID
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                  description: Message body
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  MEMBERS
+  # ═══════════════════════════════════════════════════════════════════════
+
+  /member/get:
+    get:
+      tags: [Members]
+      summary: List members
+      description: Returns all team members for the company.
+      operationId: memberList
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /member/get/{id}:
+    get:
+      tags: [Members]
+      summary: Get member
+      description: Returns a single team member by ID.
+      operationId: memberGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+                maxItems: 1
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  DATA (Reference)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  /data/makes:
+    get:
+      tags: [Data]
+      summary: List vehicle makes
+      description: Returns all vehicle makes (e.g. Toyota, Volkswagen). Optionally filter by vehicle type.
+      operationId: dataMakes
+      parameters:
+        - name: vehicle_type
+          in: query
+          schema:
+            type: string
+            default: CAR
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/makes/{id}:
+    get:
+      tags: [Data]
+      summary: Get vehicle make
+      operationId: dataMakeGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: vehicle_type
+          in: query
+          schema:
+            type: string
+            default: CAR
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/makeModels/{makeId}:
+    get:
+      tags: [Data]
+      summary: List models for a make
+      description: Returns all models for a specific vehicle make.
+      operationId: dataMakeModels
+      parameters:
+        - name: makeId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Make ID (from `/data/makes`)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/makeModels/{makeId}/{modelId}:
+    get:
+      tags: [Data]
+      summary: Get specific model
+      operationId: dataMakeModelGet
+      parameters:
+        - name: makeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/vehicleTypes:
+    get:
+      tags: [Data]
+      summary: List vehicle types
+      description: Returns all available vehicle type categories (Car, MC, Caravan, etc.).
+      operationId: dataVehicleTypes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: [USED, NEW, MOBILEHOME, CARAVAN, TRAILER, B2B, BUS, MC, SCOOTER, SNOWMOBILE, ATV]
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/fuels:
+    get:
+      tags: [Data]
+      summary: List fuel types
+      description: Returns all fuel types (Bensin, Diesel, Elektrisk, etc.).
+      operationId: dataFuels
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/fuels/{id}:
+    get:
+      tags: [Data]
+      summary: Get fuel type
+      operationId: dataFuelGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/colors:
+    get:
+      tags: [Data]
+      summary: List colors
+      description: Returns all vehicle color options.
+      operationId: dataColors
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/colors/{id}:
+    get:
+      tags: [Data]
+      summary: Get color
+      operationId: dataColorGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/bodyTypes:
+    get:
+      tags: [Data]
+      summary: List body types
+      description: Returns all vehicle body types (Sedan, SUV, Stasjonsvogn, etc.).
+      operationId: dataBodyTypes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/bodyTypes/{id}:
+    get:
+      tags: [Data]
+      summary: Get body type
+      operationId: dataBodyTypeGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/taxClasses:
+    get:
+      tags: [Data]
+      summary: List tax/registration classes
+      description: Returns all vehicle registration classes.
+      operationId: dataTaxClasses
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /data/taxClasses/{id}:
+    get:
+      tags: [Data]
+      summary: Get tax/registration class
+      operationId: dataTaxClassGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  #  DOCUMENTS
+  # ═══════════════════════════════════════════════════════════════════════
+
+  /documents/get/{table}/{tableId}:
+    get:
+      tags: [Documents]
+      summary: Get documents
+      description: |
+        Returns all documents attached to an entity.
+
+        The `table` parameter specifies the entity type (e.g. `contracts`, `ads`, `leads`).
+      operationId: documentsGet
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Entity type (e.g. `contracts`, `ads`, `leads`, `vehicles`)
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Entity ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    url:
+                      type: string
                     description:
                       type: string
-                      description: Details about the model's functionality and use cases.
-                      example: "Latest model optimized for electric and hybrid vehicles."
-                    is_deprecated:
-                      type: boolean
-                      description: Indicates if the model is deprecated.
-                      example: false
-        '500':
-          description: Internal server error
+                    creation_date:
+                      type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /documents/upload/{table}/{tableId}:
+    post:
+      tags: [Documents]
+      summary: Upload document
+      description: |
+        Uploads a document file to an entity.
+      operationId: documentsUpload
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Entity type (e.g. `contracts`, `ads`, `leads`, `vehicles`)
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Entity ID
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                description:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+# ═══════════════════════════════════════════════════════════════════════
+#  COMPONENTS
+# ═══════════════════════════════════════════════════════════════════════
 
 components:
+
+  securitySchemes:
+    ApiToken:
+      type: apiKey
+      in: header
+      name: token
+      description: API token from AutoNet portal
+
+  parameters:
+    DealId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Offer ID
+    ContractId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Contract ID
+
   schemas:
-    Company:
+
+    ErrorResponse:
+      type: object
+      properties:
+        response:
+          type: string
+          example: error
+        message:
+          type: string
+
+    # ── Data (Reference) ──
+
+    DataItem:
       type: object
       properties:
         id:
           type: integer
-          format: int32
-        organization_number:
-          type: integer
-          format: int32
-        name:
+        value:
           type: string
-        is_department:
-          type: boolean
+          description: Internal value
+        display:
+          type: string
+          description: Display name
+
+    # ── Members ──
+
+    Member:
+      type: object
+      properties:
+        id:
+          type: integer
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        telephone:
+          type: string
+        date_of_birth:
+          type: string
         address:
           type: object
           properties:
@@ -2933,611 +2056,42 @@ components:
               type: string
             country:
               type: string
-        contact:
-          type: object
-          properties:
-            telephone:
-              type: string
-            email:
-              type: string
-            website:
-              type: string
-        root_member:
-          type: object
-          properties:
-            main_company:
-              type: boolean
-            id:
-              type: integer
-              format: int32
-            name:
-              type: string
-            email:
-              type: string
-            phone:
-              type: string
-        payment_plan_id:
-          type: integer
-          format: int32
-        payment_vehicles_per_month:
-          type: integer
-          format: int32
-        billing_interval:
-          type: integer
-          format: int32
-        payment_vehicle_restriction_months:
-          type: integer
-          format: int32
-        integrations:
-          type: object
-          properties:
-            autosys:
-              type: object
-            email:
-              type: object
-              properties:
-                domain:
-                  type: string
-                username:
-                  type: string
-                quote:
-                  type: integer
-                  format: int32
-                forwarding_email:
-                  type: string
-            sms:
-              type: integer
-              format: int32
-            vegvesen:
-              type: object
-            marketing:
-              type: object
-            accounting:
-              type: object
-              properties:
-                api_platform:
-                  type: string
-                api_data:
-                  type: string
-                department_code:
-                  type: string
-                is_two_way:
-                  type: boolean
-                status:
-                  type: string
-                  enum:
-                    - ACTIVE
-                    - DEACTIVATED
-        trade_permit:
-          type: object
-          properties:
-            new_vehicle:
-              type: object
-            used_vehicle:
-              type: object
-              properties:
-                police_country:
-                  type: string
-                police_destrict:
-                  type: string
-                expiry_date_unix:
-                  type: integer
-                  format: int32
-        www:
-          type: object
-          properties:
-            domain:
-              type: string
-            theme:
-              type: string
-            iframe:
-              type: boolean
-            has_full_website:
-              type: boolean
-        accounting_identifier:
+              example: "NO"
+        job_position:
           type: string
-
-    Warranties:
-      type: object
-      properties:
-        warranty_id:
-          type: integer
-          format: int32
-        vehicle_type:
-          type: string
-          enum:
-            - USED_CAR
-            - NEW_CAR
-            - USED_MC
-            - NEW_MC
-            - MOBILEHOME
-            - CARAVAN
-            - TRAILER
-            - BUS
-            - LEASING
-            - CAR_AUCTION
-            - CAR_SUBSCRIPTION
-        vendor_name:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        coverage_months:
-          type: integer
-          format: int32
-        coverage_mileage:
-          type: integer
-          format: int32
-        max_coverage_mileage:
-          type: integer
-          format: int32
-        max_coverage_age:
-          type: integer
-          format: int32
-        price:
-          type: integer
-          format: int32
-        status:
-          type: string
-          enum:
-            - ACTIVE
-            - DEACTIVATED
-
-    Ad:
-      type: object
-      properties:
-        ads_id:
-          type: integer
-          format: int32
-        sale_type:
-          type: string
-          enum:
-            - USED_CAR
-            - NEW_CAR
-            - USED_MC
-            - NEW_MC
-            - MOBILEHOME
-            - CARAVAN
-            - TRAILER
-            - BUS
-            - LEASING
-            - CAR_AUCTION
-            - CAR_SUBSCRIPTION
-        title:
-          type: string
-        description:
-          type: string
-          description: HTML based description
-        contact_id:
-          type: integer
-          format: int32
-        registration_price:
-          type: integer
-          format: int32
-        total_price:
-          type: integer
-          format: int32
-        preferences:
-          $ref: '#/components/schemas/Preferences'
-        address:
-          $ref: '#/components/schemas/Address'
-        creation_date_unix:
-          type: integer
-          format: int64
-        update_date_unix:
-          type: integer
-          format: int64
-        publish_date_unix:
-          type: integer
-          format: int64
-        sold_date_unix:
-          type: integer
-          format: int64
-        media:
-          type: array
-          items:
-            $ref: '#/components/schemas/MediaItem'
-        vehicle:
-          type: array
-          items:
-            $ref: '#/components/schemas/VehicleItem'
-
-    VehicleItem:
-      type: object
-      properties:
-        vehicles_id:
-          type: integer
-          format: int32
-        identifier:
-          type: string
-          description: Returns license_number or VIN, whatever is available
-        license_number:
-          type: string
-        vin:
-          type: string
-        year:
-          type: integer
-          format: int32
-        mileage_int:
-          type: integer
-          format: int32
-        fuel:
-          type: string
-        weight:
-          type: integer
-          format: int32
-        gearbox:
-          type: string
-        doors:
-          type: integer
-          format: int32
-        seats:
-          type: integer
-          format: int32
-        max_towing:
-          type: integer
-          format: int32
-        total_owners:
-          type: integer
-          format: int32
-        loadingarea:
-          type: integer
-          format: int32
-        batterykwh:
-          type: integer
-          format: int32
-        batteryrange:
-          type: integer
-          format: int32
-        co2:
-          type: integer
-          format: int32
-        tax_class:
-          type: string
-        body_text:
-          type: string
-        cc:
-          type: integer
-          format: int32
-        horsepower:
-          type: integer
-        exterior_color:
-          $ref: '#/components/schemas/ColorItem'
-        interior_color:
-          type: string
-        wheel_drive:
-          type: string
-        vehicletype:
-          type: string
-        condition_report_url:
-          type: string
-        vehiclewarranty:
-          type: string
-        vehiclewarranty_id:
-          type: integer
-          format: int32
-        vehiclewarranty_months:
-          type: integer
-          format: int32
-        vehiclewarranty_mileage:
-          type: integer
-          format: int32
-        maintenanceprogram:
-          type: integer
-          format: int32
-        right_to_exchange:
-          type: integer
-          format: int32
-        first_registration_unix:
-          type: integer
-          format: int32
-        eu_last_date:
-          type: string
-        eu_next_date:
-          type: string
-        make:
-          $ref: '#/components/schemas/MakeItem'
-        model:
-          $ref: '#/components/schemas/ModelItem'
-        make_model:
-          type: string
-        creation_date_unix:
-          type: integer
-          format: int32
-        update_date_unix:
-          type: integer
-          format: int32
-        data_update_date_unix:
-          type: integer
-          format: int32
-        stand_time:
-          type: integer
-          format: int32
-        incoming_date_unix:
-          type: integer
-          format: int32
-        equipment:
-          type: array
-          items:
-            type: string
-        vehicle_status:
-          type: string
-        svv_status:
-          type: string
-
-    ColorItem:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int32
-        finn_id:
-          type: string
-        value:
-          type: string
-        display:
-          type: string
-
-    MakeItem:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int32
-        finn_id:
-          type: string
-        value:
-          type: string
-        display:
-          type: string
-
-    ModelItem:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int32
-        finn_id:
-          type: string
-        make_finn_id:
-          type: string
-        value:
-          type: string
-        display:
-          type: string
-
-    Preferences:
-      type: object
-      properties:
-        hide_contact:
-          type: boolean
-          description: Contact person is available through API, but provider should hide
-        hide_license:
-          type: boolean
-          description: License is available through API, but provider should hide
-        hide_vin:
-          type: boolean
-          description: VIN is available through API, but provider should hide
-        tradein_accepted:
-          type: boolean
-          description: Primarily used in AutoNet's www service to stop visitors from sending tradein-requests
-
-    Address:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int32
-        type:
-          type: string
-          description: What kind of address it is
-          enum:
-            - VISITING
-            - INVOICING
-            - POSTAL
-        address:
-          type: string
-        postal_code:
-          type: integer
-          format: int32
-        city:
-          type: string
-        country:
-          type: string
-        status:
-          type: string
-          description: The status of the address
-          enum:
-            - ACTIVE
-            - DEACTIVATED
-
-    LeadItem:
-      type: object
-      properties:
-        id:
-          type: integer
-        sender_uuid:
+        profile_picture_url:
           type: string
           nullable: true
-        category_id:
-          type: integer
-        contact_form_id:
-          type: integer
-        source:
-          type: string
-        assigned_members_ids:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              name:
-                type: string
-        vehicle:
+        2fa_activated:
+          type: boolean
+        permissions:
           type: object
-          properties:
-            id:
-              type: integer
-            name:
-              type: string
-        customer:
+        notifications:
           type: object
-          properties:
-            id:
-              type: integer
-            name:
-              type: string
-            email:
-              type: string
-            telephone:
-              type: string
-        is_prioritized:
+        active:
           type: boolean
-        is_starred:
-          type: boolean
-        is_opened:
-          type: boolean
-        is_last_customer_reply:
-          type: boolean
-        creation:
-          type: object
-          properties:
-            date:
-              type: integer
-            member_id:
-              type: integer
-            formatted:
-              type: string
-        update:
-          type: object
-          properties:
-            date:
-              type: integer
-            member_id:
-              type: integer
-            formatted:
-              type: string
-        follow_up_date:
-          type: integer
-        status:
-          type: string
-          enum:
-            - NEW
-            - COMPLETED
-            - CLOSED
-            - IN_PROGRESS
-    LeadCorrespondence:
-      type: object
-      properties:
-        company_id:
-          type: integer
-        type:
-          type: string
-        id:
-          type: string
-        source:
-          type: string
-        source_name:
-          type: string
-        avatar:
-          type: string
-        title:
-          type: string
-          nullable: true
-        content:
-          type: string
-          description: HTML content
-        identifier:
-          type: string
-          nullable: true
-        submittedData:
-          type: object
-        time:
-          type: string
-        unit_time:
-          type: integer
-        priority:
-          type: string
-        assigned_to:
-          type: integer
-        remind_on_time:
-          type: integer
-        creation_member_id:
-          type: string
-        creation_ip_address:
-          type: string
-          nullable: true
-        is_incoming:
-          type: boolean
-        sent:
-          type: boolean
-        ses_status:
-          type: string
-          nullable: true
-        status:
-          type: integer
 
-    MediaItem:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int32
-        priority:
-          type: integer
-          format: int32
-          description: Position of image, 0 is first
-        url:
-          type: string
-          description: Full URI to AWS-auth
-        description:
-          type: string
-          description: User-set description
-        date_unix:
-          type: integer
-          format: int64
-        background_removed:
-          type: boolean
-          description: If AutoNet's removebackground service has been applied
-        logo_background:
-          type: boolean
-          description: If AutoNet's logobackground service has been applied
+    # ── Deals ──
 
-    ErrorResponse:
-      type: object
-      properties:
-        response:
-          type: string
-          example: error
-        message:
-          type: string
-
-    StatusCounts:
+    DealStatusCounts:
       type: object
       properties:
         all:
           type: integer
-          description: Total offers
         draft:
           type: integer
-          description: Draft offers (not expired)
         sent:
           type: integer
-          description: Sent offers (not expired)
         expired:
           type: integer
-          description: Draft or sent offers past valid_until date
         accepted:
           type: integer
-          description: Accepted offers (includes converted)
         declined:
           type: integer
         converted:
           type: integer
 
-    Customer:
+    DealCustomer:
       type: object
       properties:
         id:
@@ -3549,111 +2103,78 @@ components:
         phone_number:
           type: string
 
-    Vehicle:
+    DealVehicle:
       type: object
       properties:
         id:
           type: integer
-          description: Offer-vehicle record ID
         vehicle_id:
           type: integer
           nullable: true
-          description: Reference to inventory vehicle (null if manually entered)
         make:
           type: string
-          example: Toyota
         model:
           type: string
-          example: RAV4
         variant:
           type: string
-          example: Executive
         year:
           type: integer
-          example: 2023
         vin:
           type: string
-          example: JTMW43FV10D123456
         registration_number:
           type: string
-          example: AB12345
         mileage:
           type: integer
-          example: 35000
         fuel_type:
           type: string
-          example: Hybrid
         transmission:
           type: string
-          example: Automat
         color:
           type: string
-          example: Hvit
         is_new:
           type: integer
           enum: [0, 1]
         vehicle_price:
           type: number
-          format: float
-          example: 420000
         discount_amount:
           type: number
-          format: float
-          example: 10000
         fees_amount:
           type: number
-          format: float
         fees_description:
           type: string
         engangsavgift:
           type: number
-          format: float
-          description: One-time tax (registration fee)
         estimated_price:
           type: number
-          format: float
         commission_amount:
           type: number
-          format: float
         commission_rate:
           type: number
-          format: float
         freight:
           type: number
-          format: float
         warranty:
           type: number
-          format: float
         winter_wheels:
           type: number
-          format: float
         preparation:
           type: number
-          format: float
         repair:
           type: number
-          format: float
         paint_body:
           type: number
-          format: float
         diverse:
           type: number
-          format: float
         weight_tax:
           type: number
-          format: float
         import_vat:
           type: number
-          format: float
         kalkyle_visible:
           type: integer
           enum: [0, 1]
-          description: Whether the cost calculation is visible to the customer
         image_url:
           type: string
-          description: URL to the vehicle's primary image
 
-    VehicleFinancing:
+    DealVehicleFinancing:
       type: object
       properties:
         include_financing:
@@ -3662,100 +2183,62 @@ components:
         financing_type:
           type: string
           example: annuity
-          description: Financing type (annuity, leasing, etc.)
         down_payment:
           type: number
-          format: float
-          example: 100000
         interest_rate:
           type: number
-          format: float
-          example: 5.99
         loan_term_months:
           type: integer
-          example: 60
         residual_value:
           type: number
-          format: float
         establishment_fee:
           type: number
-          format: float
         loan_amount:
           type: number
-          format: float
-          example: 320000
         monthly_payment:
           type: number
-          format: float
-          example: 6195
         tradein_as_equity:
           type: integer
           enum: [0, 1]
-          description: Whether trade-in value is used as down payment
 
-    VehicleDetail:
+    DealVehicleDetail:
       allOf:
-        - $ref: "#/components/schemas/Vehicle"
+        - $ref: "#/components/schemas/DealVehicle"
         - type: object
           properties:
             financing:
-              $ref: "#/components/schemas/VehicleFinancing"
+              $ref: "#/components/schemas/DealVehicleFinancing"
             purchase_price:
               type: number
-              format: float
-              description: Purchase price from buy contract
             ingoing_contract_type:
               type: string
               nullable: true
             total_costs:
               type: number
-              format: float
-              description: Sum of all revenue costs
             condition_reports:
               type: array
               items:
                 type: object
 
-    LineItem:
+    DealLineItem:
       type: object
       properties:
         id:
           type: integer
-        offer_id:
-          type: integer
-        product_id:
-          type: integer
-          nullable: true
-        bundle_id:
-          type: integer
-          nullable: true
-        offer_vehicle_id:
-          type: integer
-          nullable: true
-          description: Links item to a specific vehicle in the offer
         name:
           type: string
-          example: Lakk-beskyttelse
         description:
           type: string
-          example: Keramisk lakk-beskyttelse
         quantity:
           type: integer
-          example: 1
         unit_price:
           type: number
-          format: float
-          example: 15000
         discount:
           type: number
-          format: float
         total_price:
           type: number
-          format: float
-          example: 15000
         vat_rate:
           type: integer
-          example: 25
         is_upsell:
           type: integer
           enum: [0, 1]
@@ -3764,115 +2247,46 @@ components:
           enum: [0, 1]
         payment_type:
           type: string
-          example: on_sale
 
-    TradeIn:
+    DealTradeIn:
       type: object
       properties:
         id:
           type: integer
-        offer_id:
-          type: integer
-        vehicle_id:
-          type: integer
-          nullable: true
         make:
           type: string
-          example: Volkswagen
         model:
-          type: string
-          example: Golf
-        variant:
           type: string
         year:
           type: integer
-          example: 2018
         registration_number:
           type: string
-          example: CD67890
         vin:
           type: string
         mileage:
           type: integer
-          example: 95000
         fuel_type:
           type: string
         color:
           type: string
         condition:
           type: string
-          example: good
-          description: Vehicle condition (good, fair, poor)
-        eu_kontroll_date:
-          type: string
-          nullable: true
-          description: EU control / MOT expiry date
         estimated_value:
           type: number
-          format: float
-          example: 120000
-        price_type:
-          type: string
-          example: estimate
         vehicle_price:
           type: number
-          format: float
-          example: 115000
-        fees_amount:
-          type: number
-          format: float
-        freight:
-          type: number
-          format: float
-        warranty:
-          type: number
-          format: float
-        winter_wheels:
-          type: number
-          format: float
-        preparation:
-          type: number
-          format: float
-        repair:
-          type: number
-          format: float
-        paint_body:
-          type: number
-          format: float
-        diverse:
-          type: number
-          format: float
-        weight_tax:
-          type: number
-          format: float
-        import_vat:
-          type: number
-          format: float
-        estimated_price:
-          type: number
-          format: float
-        kalkyle_visible:
-          type: integer
-          enum: [0, 1]
         notes:
           type: string
 
-    Event:
+    DealEvent:
       type: object
       properties:
         id:
           type: integer
-        offer_id:
-          type: integer
         event_type:
           type: string
-          example: sent
         description:
           type: string
-          example: Tilbud sendt til kunden
-        member_id:
-          type: integer
-          nullable: true
         member_name:
           type: string
         metadata:
@@ -3882,12 +2296,10 @@ components:
           type: string
           format: date-time
 
-    Signature:
+    DealSignature:
       type: object
       properties:
         id:
-          type: integer
-        offer_id:
           type: integer
         signer_name:
           type: string
@@ -3898,14 +2310,13 @@ components:
           format: date-time
           nullable: true
 
-    OfferSummary:
+    DealOfferSummary:
       type: object
       properties:
         id:
           type: integer
         offer_number:
           type: integer
-          description: Auto-generated sequential offer number
         offer_type:
           type: string
           enum: [innkjop, kommisjon, formidling, salg]
@@ -3917,10 +2328,8 @@ components:
           nullable: true
         total_price:
           type: number
-          format: float
         vat_amount:
           type: number
-          format: float
         vat_rate:
           type: integer
         include_vat:
@@ -3951,15 +2360,15 @@ components:
           type: string
           format: date-time
         customer:
-          $ref: "#/components/schemas/Customer"
+          $ref: "#/components/schemas/DealCustomer"
         vehicles:
           type: array
           items:
-            $ref: "#/components/schemas/Vehicle"
+            $ref: "#/components/schemas/DealVehicle"
 
-    OfferDetail:
+    DealOfferDetail:
       allOf:
-        - $ref: "#/components/schemas/OfferSummary"
+        - $ref: "#/components/schemas/DealOfferSummary"
         - type: object
           properties:
             decline_reason:
@@ -3967,7 +2376,6 @@ components:
               nullable: true
             portal_token:
               type: string
-              description: Token for customer portal access
             terms_template_id:
               type: integer
               nullable: true
@@ -3982,111 +2390,93 @@ components:
             equipment_data:
               type: string
               nullable: true
-              description: JSON string of equipment data
             lead_id:
               type: integer
               nullable: true
             customer_fills:
               type: integer
               enum: [0, 1]
-              description: Whether the customer should fill in their own details
             vehicles:
               type: array
               items:
-                $ref: "#/components/schemas/VehicleDetail"
+                $ref: "#/components/schemas/DealVehicleDetail"
             line_items:
               type: array
               items:
-                $ref: "#/components/schemas/LineItem"
+                $ref: "#/components/schemas/DealLineItem"
             trade_ins:
               type: array
               items:
-                $ref: "#/components/schemas/TradeIn"
+                $ref: "#/components/schemas/DealTradeIn"
             events:
               type: array
               items:
-                $ref: "#/components/schemas/Event"
+                $ref: "#/components/schemas/DealEvent"
             signatures:
               type: array
               items:
-                $ref: "#/components/schemas/Signature"
+                $ref: "#/components/schemas/DealSignature"
             attachments:
               type: array
               items:
                 type: object
 
-    OfferCreate:
+    DealOfferCreate:
       type: object
       required: [offer_type]
       properties:
         offer_type:
           type: string
           enum: [innkjop, kommisjon, formidling, salg]
-          description: "**Required.** Type of deal."
+          description: "**Required**"
         customer_id:
           type: integer
           nullable: true
-          description: Customer/contact ID
         total_price:
           type: number
-          format: float
-          default: 0
         vat_amount:
           type: number
-          format: float
-          default: 0
         vat_rate:
           type: integer
           default: 25
         include_vat:
           type: integer
           enum: [0, 1]
-          default: 0
         valid_until:
           type: string
           format: date
           nullable: true
-          description: Offer expiry date (YYYY-MM-DD)
         terms_template_id:
           type: integer
           nullable: true
         notes:
           type: string
-          description: Notes visible to the customer
+          description: Visible to customer
         internal_notes:
           type: string
-          description: Internal notes (not visible to the customer)
-        equipment_data:
-          type: string
-          nullable: true
-          description: JSON string of equipment data
+          description: Internal only
         customer_fills:
           type: integer
           enum: [0, 1]
-          default: 0
-          description: Whether the customer should fill in their own details via the portal
         lead_id:
           type: integer
           nullable: true
-          description: Link to an existing lead
         vehicles:
           type: array
           items:
-            $ref: "#/components/schemas/VehicleInput"
+            $ref: "#/components/schemas/DealVehicleInput"
         line_items:
           type: array
           items:
-            $ref: "#/components/schemas/LineItemInput"
+            $ref: "#/components/schemas/DealLineItemInput"
         trade_ins:
           type: array
           items:
-            $ref: "#/components/schemas/TradeInInput"
+            $ref: "#/components/schemas/DealTradeInInput"
 
-    OfferUpdate:
+    DealOfferUpdate:
       type: object
-      description: |
-        Same fields as create. Only include fields you want to change.
-        `vehicles`, `line_items`, and `trade_ins` are replaced entirely — include all items you want to keep.
+      description: Same fields as create. Arrays are replaced entirely.
       properties:
         offer_type:
           type: string
@@ -4096,10 +2486,8 @@ components:
           nullable: true
         total_price:
           type: number
-          format: float
         vat_amount:
           type: number
-          format: float
         vat_rate:
           type: integer
         include_vat:
@@ -4109,53 +2497,41 @@ components:
           type: string
           format: date
           nullable: true
-        terms_template_id:
-          type: integer
-          nullable: true
         notes:
           type: string
         internal_notes:
           type: string
-        equipment_data:
-          type: string
-          nullable: true
         customer_fills:
           type: integer
           enum: [0, 1]
-        lead_id:
-          type: integer
-          nullable: true
         vehicles:
           type: array
           items:
-            $ref: "#/components/schemas/VehicleInput"
+            $ref: "#/components/schemas/DealVehicleInput"
         line_items:
           type: array
           items:
-            $ref: "#/components/schemas/LineItemInput"
+            $ref: "#/components/schemas/DealLineItemInput"
         trade_ins:
           type: array
           items:
-            $ref: "#/components/schemas/TradeInInput"
+            $ref: "#/components/schemas/DealTradeInInput"
 
-    VehicleInput:
+    DealVehicleInput:
       type: object
       properties:
         vehicle_id:
           type: integer
           nullable: true
-          description: Reference to an existing vehicle in inventory (optional)
+          description: Inventory vehicle reference
         make:
           type: string
-          example: Toyota
         model:
           type: string
-          example: RAV4
         variant:
           type: string
         year:
           type: integer
-          example: 2023
         vin:
           type: string
         registration_number:
@@ -4173,121 +2549,81 @@ components:
           enum: [0, 1]
         vehicle_price:
           type: number
-          format: float
         discount_amount:
           type: number
-          format: float
         fees_amount:
           type: number
-          format: float
         fees_description:
           type: string
         engangsavgift:
           type: number
-          format: float
         estimated_price:
           type: number
-          format: float
         commission_amount:
           type: number
-          format: float
         commission_rate:
           type: number
-          format: float
         freight:
           type: number
-          format: float
         warranty:
           type: number
-          format: float
         winter_wheels:
           type: number
-          format: float
         preparation:
           type: number
-          format: float
         repair:
           type: number
-          format: float
         paint_body:
           type: number
-          format: float
         diverse:
           type: number
-          format: float
         weight_tax:
           type: number
-          format: float
         import_vat:
           type: number
-          format: float
         kalkyle_visible:
           type: integer
           enum: [0, 1]
         include_financing:
           type: integer
           enum: [0, 1]
-          description: Whether to include financing on this vehicle
         financing_type:
           type: string
-          example: annuity
         down_payment:
           type: number
-          format: float
         interest_rate:
           type: number
-          format: float
         loan_term_months:
           type: integer
         residual_value:
           type: number
-          format: float
         establishment_fee:
           type: number
-          format: float
         loan_amount:
           type: number
-          format: float
         monthly_payment:
           type: number
-          format: float
         tradein_as_equity:
           type: integer
           enum: [0, 1]
 
-    LineItemInput:
+    DealLineItemInput:
       type: object
       properties:
-        product_id:
-          type: integer
-          nullable: true
-        bundle_id:
-          type: integer
-          nullable: true
-        offer_vehicle_id:
-          type: integer
-          nullable: true
-          description: Links this item to a specific vehicle in the offer
         name:
           type: string
-          example: Lakk-beskyttelse
         description:
           type: string
         quantity:
           type: integer
-          example: 1
         unit_price:
           type: number
-          format: float
         discount:
           type: number
-          format: float
         total_price:
           type: number
-          format: float
         vat_rate:
           type: integer
-          example: 25
         is_upsell:
           type: integer
           enum: [0, 1]
@@ -4296,26 +2632,16 @@ components:
           enum: [0, 1]
         payment_type:
           type: string
-          example: on_sale
 
-    TradeInInput:
+    DealTradeInInput:
       type: object
       properties:
-        vehicle_id:
-          type: integer
-          nullable: true
-          description: Reference to an existing vehicle in inventory (optional)
         make:
           type: string
-          example: Volkswagen
         model:
-          type: string
-          example: Golf
-        variant:
           type: string
         year:
           type: integer
-          example: 2018
         registration_number:
           type: string
         vin:
@@ -4328,58 +2654,465 @@ components:
           type: string
         condition:
           type: string
-          example: good
-          description: Vehicle condition (good, fair, poor)
-        eu_kontroll_date:
-          type: string
-          format: date
-          nullable: true
+          description: good, fair, poor
         estimated_value:
           type: number
-          format: float
-        price_type:
-          type: string
-          example: estimate
         vehicle_price:
           type: number
-          format: float
-        fees_amount:
-          type: number
-          format: float
-        freight:
-          type: number
-          format: float
-        warranty:
-          type: number
-          format: float
-        winter_wheels:
-          type: number
-          format: float
-        preparation:
-          type: number
-          format: float
-        repair:
-          type: number
-          format: float
-        paint_body:
-          type: number
-          format: float
-        diverse:
-          type: number
-          format: float
-        weight_tax:
-          type: number
-          format: float
-        import_vat:
-          type: number
-          format: float
-        estimated_price:
-          type: number
-          format: float
-        kalkyle_visible:
+        notes:
+          type: string
+
+    # ── Contracts ──
+
+    ContractStatusCounts:
+      type: object
+      properties:
+        alle:
+          type: integer
+          description: Total
+        utkast:
+          type: integer
+          description: Drafts
+        venter_signering:
+          type: integer
+          description: Awaiting signatures
+        fullfort:
+          type: integer
+          description: Completed
+
+    ContractOwner:
+      type: object
+      properties:
+        id:
+          type: integer
+        contracts_id:
+          type: integer
+        customer_id:
+          type: integer
+          nullable: true
+        type:
+          type: string
+          enum: [PERSON, COMPANY, CO_PERSON, CO_COMPANY]
+        email:
+          type: string
+        mobile:
+          type: string
+        name:
+          type: string
+        identifier:
+          type: string
+          description: Personal ID or org number
+        first_name:
+          type: string
+        last_name:
+          type: string
+        company_name:
+          type: string
+        address1:
+          type: string
+        postal_code:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        is_dealer:
+          type: boolean
+        is_foreign:
+          type: boolean
+        signature_data:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+              enum: [MANUAL, DIGITAL]
+            status:
+              type: integer
+              description: "1 = not signed, 2 = signed, 3 = cancelled"
+            uri:
+              type: string
+              nullable: true
+        sent_signature_request:
+          type: boolean
+
+    ContractSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        company_id:
+          type: integer
+        vehicles_id:
+          type: integer
+        ads_id:
+          type: integer
+        contract_type:
+          type: string
+          enum: [BUY, SELL]
+        contract_art_type:
+          type: string
+          enum: [SALE, PURCHASE, SPECIAL_PURCHASE, BROKERAGE, COMMISION]
+        contract_art_type_nice:
+          type: string
+        is_special:
           type: integer
           enum: [0, 1]
-        notes:
+        price:
+          type: integer
+        status:
+          type: string
+          enum: [DRAFT, CONTRACT_SIGNED, COMPLETED]
+        sent_signature_request:
+          type: boolean
+        vehicle_name:
+          type: string
+          example: "2023 Toyota RAV4"
+        vehicle_thumbnail:
+          type: string
+        owners_data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContractOwner"
+        creation_date_unix:
+          type: integer
+        update_date_unix:
+          type: integer
+        display_creation_date:
+          type: string
+        display_update_date:
+          type: string
+        creation_member:
+          type: string
+        signature:
+          type: object
+          nullable: true
+          properties:
+            requires_signature:
+              type: boolean
+            signed:
+              type: boolean
+        has_accounting:
+          type: boolean
+        has_tradein:
+          type: boolean
+
+    ContractDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        company_id:
+          type: integer
+        vehicles_id:
+          type: integer
+        ads_id:
+          type: integer
+        contract_type:
+          type: string
+          enum: [BUY, SELL]
+        contract_art_type:
+          type: string
+          enum: [SALE, PURCHASE, SPECIAL_PURCHASE, BROKERAGE, COMMISION]
+        contract_art_type_nice:
+          type: string
+        is_special:
+          type: integer
+          enum: [0, 1]
+        status:
+          type: string
+          enum: [DRAFT, CONTRACT_SIGNED, COMPLETED]
+        payment_type:
+          type: string
+          enum: [CREDITLINE, FINANCE, BANK_TRANSFER, CARD_PAYMENT, CASH]
+          nullable: true
+        price:
+          type: integer
+        price_nice:
+          type: string
+          example: "450 000"
+        sell_price:
+          type: number
+          nullable: true
+        omreg_price:
+          type: integer
+          description: Registration fee
+        discount:
+          type: integer
+        vehicle_mva:
+          type: integer
+          description: Vehicle VAT
+        mileage:
+          type: integer
+        keys:
+          type: integer
+        delivery_date:
+          type: string
+        delivery_date_unix:
+          type: integer
+        extras:
+          type: string
+          nullable: true
+        more_info:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        internal_notes:
+          type: string
+          nullable: true
+        account_number:
+          type: string
+          nullable: true
+        customer_account_number:
+          type: string
+          nullable: true
+          description: Customer's bank account (BUY contracts)
+        kid:
+          type: string
+          nullable: true
+          description: KID payment reference
+        invoice_number:
+          type: integer
+          nullable: true
+        owners_data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContractOwner"
+        insurance:
+          type: object
+          nullable: true
+          properties:
+            company_id:
+              type: integer
+            type:
+              type: string
+            yearly_mileage:
+              type: integer
+            transfer:
+              type: string
+        tradein_data:
+          type: object
+          nullable: true
+          description: Trade-in vehicle data
+        loan_equity:
+          type: integer
+          description: Down payment
+        loan_time:
+          type: integer
+          description: Loan term in years
+        lien_resolver:
+          type: string
+          enum: [OWNER, DEALER]
+          nullable: true
+        lien_difference:
+          type: integer
+        liens_data:
+          type: array
+          items:
+            type: object
+        cash_inprice:
+          type: integer
+        card_inprice:
+          type: integer
+        card_inprice2:
+          type: integer
+        warranty_id:
+          type: integer
+        warranty_status:
+          type: integer
+        warranty_data:
+          type: object
+          nullable: true
+        leasing:
+          type: object
+          properties:
+            active:
+              type: boolean
+            data:
+              type: object
+              nullable: true
+        language:
+          type: string
+          enum: [NO, EN]
+        offer_id:
+          type: integer
+          nullable: true
+          description: Linked deal offer
+        lead_id:
+          type: integer
+          nullable: true
+        connected_vehicles_id:
+          type: integer
+          nullable: true
+        transport_id:
+          type: integer
+          nullable: true
+        accounting_identifier:
+          type: string
+          nullable: true
+        sent_signature_request:
+          type: boolean
+        creation_date:
+          type: string
+        update_date:
+          type: string
+        sold_date:
+          type: string
+        creation_date_unix:
+          type: integer
+        update_date_unix:
+          type: integer
+        sold_date_unix:
+          type: integer
+        creation_member:
+          type: string
+        update_member:
+          type: string
+        sold_member:
+          type: string
+        vehicle_name:
+          type: string
+        vehicle_thumbnail:
+          type: string
+        agreement_template:
+          type: object
+          nullable: true
+        settings_data:
+          type: object
+        payment_data:
+          type: array
+          items:
+            type: object
+        payment_status:
+          type: object
+          nullable: true
+
+    ContractCreate:
+      type: object
+      required: [contract_type, vehicle_id, price, delivery_date, owner_type]
+      properties:
+        contract_type:
+          type: string
+          enum: [BUY, SELL]
+          description: "**Required.** `BUY` = incoming purchase, `SELL` = outgoing sale"
+        vehicle_id:
+          type: integer
+          description: "**Required.** Vehicle ID from inventory"
+        ads_id:
+          type: integer
+          description: Ad ID (if vehicle has an ad)
+          default: 0
+        price:
+          type: integer
+          description: "**Required.** Contract price in NOK"
+        delivery_date:
+          type: string
+          format: date
+          description: "**Required.** Handover date (YYYY-MM-DD)"
+        mileage:
+          type: integer
+          default: 0
+        contract_art_type:
+          type: string
+          enum: [PURCHASE, BROKERAGE, SPECIAL_PURCHASE, COMMISION]
+          default: PURCHASE
+          description: BUY contracts only
+        customer_account_number:
+          type: string
+          description: "Customer's 11-digit bank account (BUY contracts)"
+        account_number:
+          type: string
+          description: Bank account number (SELL contracts)
+        omreg_price:
+          type: integer
+          description: Registration fee (SELL contracts)
+          default: 0
+        extras:
+          type: string
+          description: Equipment / extras
+        comments:
+          type: string
+          description: Additional comments
+        owner_type:
+          type: string
+          enum: [PERSON, COMPANY]
+          description: "**Required.** Buyer/seller type"
+        owner_first_name:
+          type: string
+          description: Required if owner_type is PERSON
+        owner_last_name:
+          type: string
+        owner_company_name:
+          type: string
+          description: Required if owner_type is COMPANY
+        owner_identifier:
+          type: string
+          description: Personal ID (11 digits) or org number (9 digits)
+        owner_email:
+          type: string
+        owner_phone:
+          type: string
+        owner_address:
+          type: string
+        owner_postal_code:
+          type: string
+        owner_city:
+          type: string
+
+    ContractUpdate:
+      type: object
+      description: |
+        Pass any combination of allowed fields. Only DRAFT contracts can be updated.
+      properties:
+        price:
+          type: integer
+          description: Contract price
+        mileage:
+          type: integer
+        omreg_price:
+          type: integer
+          description: Registration fee
+        vehicle_mva:
+          type: integer
+          description: Vehicle VAT
+        discount:
+          type: integer
+        comments:
+          type: string
+          description: Maps to `more_info` field
+        equipment:
+          type: string
+          description: Maps to `extras` field
+        delivery_date:
+          type: string
+          format: date
+        paymentmethod:
+          type: string
+          enum: [CREDITLINE, FINANCE, BANK_TRANSFER, CARD_PAYMENT, CASH]
+        loan_equity:
+          type: integer
+        cash_inprice:
+          type: integer
+        card_inprice:
+          type: integer
+        card_inprice2:
+          type: integer
+        lien_resolver:
+          type: string
+          enum: [OWNER, DEALER]
+        remaining_liens:
+          type: integer
+        insurancetype:
+          type: string
+          description: SELL contracts only
+        insurancecompany:
+          type: integer
+          description: Insurance company ID
+        insuranceyearlymileage:
+          type: integer
+        insurancetransfer:
           type: string
 
   responses:
@@ -4393,16 +3126,16 @@ components:
             response: error
             message: No token provided
     Forbidden:
-      description: Token does not have the `deals` scope
+      description: Token missing required scope
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
           example:
             response: error
-            message: "No permissions granted to controller. Requires scope: deals"
+            message: "No permissions granted to controller. Requires scope: contract"
     RateLimited:
-      description: Rate limit exceeded (500 requests/day)
+      description: Rate limit exceeded (500/day)
       content:
         application/json:
           schema:
@@ -4411,10 +3144,5 @@ components:
             response: error
             message: Max 500 requests per day reached
 
-  securitySchemes:
-    TokenHeader:
-      type: apiKey
-      in: header
-      name: Token
 security:
-  - TokenHeader: []
+  - ApiToken: []
